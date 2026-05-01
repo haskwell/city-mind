@@ -14,11 +14,13 @@ class UI:
         self.GRAY   = (40, 40, 40)
 
         self.CELL_COLORS = {
-            "empty":       (200, 200, 200),
-            "hospital":    (255, 80,  80),
-            "school":      (80,  80,  255),
-            "industrial":  (255, 200, 50),
-            "residential": (100, 200, 100),
+            "empty":           (200, 200, 200), # Light Gray
+            "hospital":        (255, 80,  80),  # Soft Red
+            "school":          (80,  80,  255), # Soft Blue
+            "industrial":      (255, 200, 50),  # Amber/Yellow
+            "residential":     (100, 200, 100), # Soft Green
+            "power_plant":     (160, 32,  240), # Purple
+            "ambulance_depot": (255, 140, 0)    # Deep Orange
         }
 
     def draw_grid(self, screen):

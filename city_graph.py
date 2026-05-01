@@ -6,4 +6,4 @@ grid = [[{
     "risk": 0.0,
     "blocked": False,
     "population": 0
-}for col in range(COLS)]for row in range(ROWS)]
+} for _ in range(COLS) ] for _ in range(ROWS) ]
