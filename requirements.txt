@@ -1,0 +1,6 @@
+pygame
+pygame-gui
+networkx
+numpy
+scikit-learn
+matplotlib
