@@ -56,7 +56,10 @@ class CityGraph:
         self.G.edges[a, b]['is_blocked'] = True
         self.G.edges[a, b]['effective_cost'] = math.inf
 
-    def update_risk(self, node_id, risk_level, multiplier):
+    def update_risk(self, node_id, risk_level, multiplier=None):
+        if multiplier is None:
+            risk_multipliers = {"low": 1.0, "medium": 1.2, "high": 1.5}
+            multiplier = risk_multipliers.get(risk_level, 1.0)
         self.G.nodes[node_id]['risk_level'] = risk_level
         self.G.nodes[node_id]['risk_multiplier'] = multiplier
         # also update all edges touching this node
@@ -65,3 +68,54 @@ class CityGraph:
             if not edge['is_blocked']:
                 other_mult = self.G.nodes[neighbor]['risk_multiplier']
                 edge['effective_cost'] = edge['base_cost'] * max(multiplier, other_mult)
+
+    def unblock_road(self, a, b):
+        self.G.edges[a, b]['is_blocked'] = False
+        # Reset effective cost based on risk multipliers
+        node_a_mult = self.G.nodes[a]['risk_multiplier']
+        node_b_mult = self.G.nodes[b]['risk_multiplier']
+        self.G.edges[a, b]['effective_cost'] = self.G.edges[a, b]['base_cost'] * max(node_a_mult, node_b_mult)
+
+    def get_edge(self, a, b):
+        return self.G.edges[a, b]
+
+    def get_node(self, node_id):
+        return self.G.nodes[node_id]
+
+    def get_neighbors(self, node_id):
+        return list(self.G.neighbors(node_id))
+
+    def node_id(self, row, col):
+        return self._node_id(row, col)
+
+    def stats(self):
+        stats = {
+            "nodes": self.G.number_of_nodes(),
+            "edges": self.G.number_of_edges(),
+            "blocked_edges": sum(1 for _, _, data in self.G.edges(data=True) if data['is_blocked']),
+            "buildings": sum(1 for _, data in self.G.nodes(data=True) if data['location_type'] is not None),
+            "high_risk_nodes": sum(1 for _, data in self.G.nodes(data=True) if data['risk_level'] == 'high'),
+            "ambulance_depots": sum(1 for _, data in self.G.nodes(data=True) if data['location_type'] == 'ambulance_depot')
+        }
+        return stats
+
+    def reset(self):
+        # Reset all nodes to default state
+        for node_id in self.G.nodes():
+            self.G.nodes[node_id].update({
+                'location_type': None,
+                'population_density': 0.0,
+                'risk_index': 0.0,
+                'accessible': True,
+                'cluster_id': None,
+                'risk_level': None,
+                'risk_multiplier': 1.0,
+                'has_ambulance': False
+            })
+        
+        # Reset all edges to default state
+        for a, b in self.G.edges():
+            self.G.edges[a, b].update({
+                'is_blocked': False,
+                'effective_cost': 1.0
+            })
