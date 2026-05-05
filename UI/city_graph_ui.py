@@ -612,23 +612,25 @@ class CityGraphUI:
 
     def _execute_csp(self):
         """Execute the CSP algorithm with current parameters."""
+        # Import CSP modules here to avoid circular imports
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'Algorithms'))
         try:
-            # Import CSP modules here to avoid circular imports
-            import sys
-            import os
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'Algorithms'))
-            from Algorithms.CSP import CSPLayoutSolver, CSPConfig
-            
+            from CSP import solve_city_layout, CSPConflictError
+        except ImportError:
+            # Fallback to Algorithms.CSP
+            from Algorithms.CSP import solve_city_layout, CSPConflictError
+        
+        try:
             # Get building counts
             counts = {}
             total_buildings = 0
             for key, var in self.csp_vars.items():
                 count = var.get()
                 if count > 0:
-                    # Convert UI keys to CSP format
-                    csp_key = key.title() if key != "power_plant" else "PowerPlant"
-                    if key == "ambulance_depot":
-                        csp_key = "AmbulanceDepot"
+                    # Convert UI keys to CSP format (lowercase)
+                    csp_key = key.lower()  # CSP uses: power_plant, industrial, hospital, etc.
                     counts[csp_key] = count
                     total_buildings += count
             
@@ -639,32 +641,51 @@ class CityGraphUI:
                     f"Total building count ({total_buildings}) must equal grid size ({grid_size})")
                 return
             
-            # Create CSP configuration
-            config = CSPConfig(
-                rows=self.graph.rows,
-                cols=self.graph.cols,
-                counts=counts,
-                max_backtracks=50000
-            )
-            
             # Run CSP solver
             self._set_status("running CSP solver...")
-            solver = CSPLayoutSolver(config)
-            result = solver.solve()
+            result = solve_city_layout(self.graph, counts, seed=42, max_attempts=300)
             
             # Apply results to graph
+            self._apply_csp_result(result)
+            
+            # Show results based on success
             if result.success:
-                self._apply_csp_result(result)
-                self._set_status("CSP completed successfully!")
-                messagebox.showinfo("Success", "CSP layout generated successfully!")
+                self._set_status(f"CSP completed successfully! (explored {result.nodes_explored} nodes, {result.elapsed:.3f}s)")
+                messagebox.showinfo("Success", 
+                    f"CSP layout generated successfully!\n\n"
+                    f"Nodes explored: {result.nodes_explored:,}\n"
+                    f"Time elapsed: {result.elapsed:.3f} seconds")
             else:
-                self._apply_csp_result(result)
-                self._set_status(f"CSP completed with {len(result.violations)} violations")
-                violations_text = "\n".join(result.violations[:5])  # Show first 5 violations
+                self._set_status(f"CSP completed with {len(result.violations)} violations (explored {result.nodes_explored} nodes)")
+                violations_text = "\n".join([f"• {rule}: {detail}" for rule, detail in result.violations[:5]])
                 if len(result.violations) > 5:
                     violations_text += f"\n... and {len(result.violations) - 5} more"
                 messagebox.showwarning("Partial Solution", 
-                    f"CSP found a partial solution with {len(result.violations)} violations:\n\n{violations_text}")
+                    f"CSP found a best-effort solution with {len(result.violations)} violations:\n\n"
+                    f"{violations_text}\n\n"
+                    f"Nodes explored: {result.nodes_explored:,}\n"
+                    f"Time elapsed: {result.elapsed:.3f} seconds")
+        
+        except CSPConflictError as e:
+            # Handle CSP conflict errors with detailed diagnostics
+            self._set_status("CSP failed - constraints violated")
+            
+            # Build conflict message
+            conflict_msg = "CSP could not find a valid layout due to constraint conflicts:\n\n"
+            
+            for conflict in e.conflicts:
+                rule = conflict.get("rule", "Unknown")
+                detail = conflict.get("detail", "")
+                conflict_msg += f"• {rule}: {detail}\n"
+            
+            # Add suggestion if available
+            try:
+                suggestion = e.minimum_conflict_proposal()
+                conflict_msg += f"\nSuggested fix: {suggestion}"
+            except:
+                pass
+            
+            messagebox.showwarning("CSP Conflict", conflict_msg)
         
         except Exception as e:
             messagebox.showerror("Error", f"Failed to execute CSP: {str(e)}")
@@ -672,16 +693,25 @@ class CityGraphUI:
 
     def _apply_csp_result(self, result):
         """Apply CSP result to the current graph."""
-        # Update node types
+        # Debug: Print what we're getting from CSP
+        print("DEBUG: CSP Assignment received:")
+        assignment_types = {}
         for node_id, location_type in result.assignment.items():
-            self.graph.set_location_type(node_id, location_type.lower())
+            if location_type is not None:
+                assignment_types[location_type] = assignment_types.get(location_type, 0) + 1
+                self.graph.set_location_type(node_id, location_type.lower())
+        print(f"Building types assigned: {assignment_types}")
         
-        # Update edge costs from CSP result
-        for edge in result.graph.edges(data=True):
-            a, b, data = edge
-            if self.graph.G.has_edge(a, b):
-                self.graph.G.edges[a, b]['base_cost'] = data['base_cost']
-                self.graph.G.edges[a, b]['effective_cost'] = data['effective_cost']
+        # Refresh display
+        self._render()
+        self._update_stats()
+
+    def _apply_csp_assignment(self, assignment):
+        """Apply CSP assignment to the current graph. (Kept for backward compatibility)"""
+        # This method is no longer used with new CSP, but kept for compatibility
+        for node_id, location_type in assignment.items():
+            if location_type is not None:
+                self.graph.set_location_type(node_id, location_type.lower())
         
         # Refresh display
         self._render()
