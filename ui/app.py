@@ -10,7 +10,7 @@ COLORS = {
     LocationType.EMPTY:           "#f0f0f0",
     LocationType.RESIDENTIAL:     "#4CAF50",
     LocationType.HOSPITAL:        "#F44336",
-    LocationType.PRIMARY_HOSPITAL: "#FF1744",
+    LocationType.PRIMARY_HOSPITAL: "#710017",
     LocationType.SCHOOL:          "#2196F3",
     LocationType.INDUSTRIAL:      "#FF9800",
     LocationType.POWER_PLANT:     "#9C27B0",
@@ -75,13 +75,22 @@ class App:
         row_gs = tk.Frame(self.left)
         row_gs.pack(fill="x", pady=2)
         tk.Label(row_gs, text="Grid Size", width=18, anchor="w").pack(side="left")
-        self.grid_size_var = tk.IntVar(value=8)
+        self.grid_size_var = tk.IntVar(value=5)
         tk.Spinbox(
             row_gs, from_=4, to=20,
             textvariable=self.grid_size_var,
             width=5,
             command=self.update_total
         ).pack(side="right")
+
+        default_values = {
+            LocationType.RESIDENTIAL: 10,
+            LocationType.HOSPITAL: 4,
+            LocationType.SCHOOL: 4,
+            LocationType.INDUSTRIAL: 3,
+            LocationType.POWER_PLANT: 3,
+            LocationType.AMBULANCE_DEPOT: 1,
+        }
 
         self.count_vars = {}
         for lt in [
@@ -92,7 +101,7 @@ class App:
             LocationType.POWER_PLANT,
             LocationType.AMBULANCE_DEPOT,
         ]:
-            var = tk.IntVar(value=0)
+            var = tk.IntVar(value=default_values[lt])
             self.count_vars[lt] = var
 
             frame = tk.Frame(self.left)

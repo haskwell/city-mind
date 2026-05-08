@@ -439,6 +439,31 @@ def minimum_conflict_layout(grid, required_counts):
 
 
 # Post-assignment: fill in simulation properties
+def find_farthest_hospital_from_depot(grid):
+    """
+    Find the hospital farthest from the ambulance depot using Manhattan distance.
+    Returns the hospital cell or None if no hospital or depot exists.
+    """
+    hospitals = list(grid.cells_of_type(LocationType.HOSPITAL))
+    depots = list(grid.cells_of_type(LocationType.AMBULANCE_DEPOT))
+    
+    if not hospitals or not depots:
+        return None
+    
+    depot = depots[0]  # There should only be one depot
+    farthest_hospital = None
+    max_distance = -1
+    
+    for hospital in hospitals:
+        # Calculate Manhattan distance
+        distance = abs(hospital.row - depot.row) + abs(hospital.col - depot.col)
+        
+        if distance > max_distance:
+            max_distance = distance
+            farthest_hospital = hospital
+    
+    return farthest_hospital
+
 def assign_simulation_properties(grid):
     import random
 
@@ -494,7 +519,9 @@ def run_layout(grid_size, required_counts):
         grid, violations = minimum_conflict_layout(grid, required_counts)
 
     assign_simulation_properties(grid)
-    hospitals = list(grid.cells_of_type(LocationType.HOSPITAL))
-    if hospitals:
-        random.choice(hospitals).location_type = LocationType.PRIMARY_HOSPITAL
+    
+    farthest_hospital = find_farthest_hospital_from_depot(grid)
+    if farthest_hospital:
+        farthest_hospital.location_type = LocationType.PRIMARY_HOSPITAL
+    
     return grid, violations
