@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CityMind — Urban Intelligence System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon">⬡</div>
+      <div class="brand-text">
+        <span class="brand-name">CityMind</span>
+        <span class="brand-tagline">Urban Intelligence System</span>
+      </div>
+    </div>
+    <div class="topbar-status" id="global_status">
+      <span class="status-dot" id="global_dot"></span>
+      <span id="global_status_text">Ready</span>
+    </div>
+  </header>
+
+  <div class="app-layout">
+
+    <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+    <aside class="sidebar">
+
+      <!-- ── Challenge 1 ── -->
+      <section class="panel" id="panel_c1">
+        <div class="panel-header">
+          <div class="panel-badge badge-c1">C1</div>
+          <div class="panel-title-group">
+            <h2 class="panel-title">City Layout</h2>
+            <span class="algo-chip">CSP</span>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label">Grid Size</label>
+          <div class="stepper">
+            <button class="stepper-btn" onclick="adjustValue('grid_size', -1, 4, 20)">−</button>
+            <input class="stepper-input" type="number" id="grid_size" value="5" min="4" max="20" oninput="updateTotal()">
+            <button class="stepper-btn" onclick="adjustValue('grid_size', 1, 4, 20)">+</button>
+          </div>
+        </div>
+
+        <div class="counts-table">
+          <div class="count-row" data-type="RESIDENTIAL">
+            <span class="count-swatch" style="background:#22c55e"></span>
+            <span class="count-label">Residential</span>
+            <div class="stepper stepper-sm">
+              <button class="stepper-btn" onclick="adjustCount('RESIDENTIAL', -1)">−</button>
+              <input class="stepper-input" type="number" id="count_RESIDENTIAL" value="10" min="0" max="200" oninput="updateTotal()">
+              <button class="stepper-btn" onclick="adjustCount('RESIDENTIAL', 1)">+</button>
+            </div>
+          </div>
+          <div class="count-row" data-type="HOSPITAL">
+            <span class="count-swatch" style="background:#ef4444"></span>
+            <span class="count-label">Hospital</span>
+            <div class="stepper stepper-sm">
+              <button class="stepper-btn" onclick="adjustCount('HOSPITAL', -1)">−</button>
+              <input class="stepper-input" type="number" id="count_HOSPITAL" value="4" min="0" max="200" oninput="updateTotal()">
+              <button class="stepper-btn" onclick="adjustCount('HOSPITAL', 1)">+</button>
+            </div>
+          </div>
+          <div class="count-row" data-type="SCHOOL">
+            <span class="count-swatch" style="background:#3b82f6"></span>
+            <span class="count-label">School</span>
+            <div class="stepper stepper-sm">
+              <button class="stepper-btn" onclick="adjustCount('SCHOOL', -1)">−</button>
+              <input class="stepper-input" type="number" id="count_SCHOOL" value="4" min="0" max="200" oninput="updateTotal()">
+              <button class="stepper-btn" onclick="adjustCount('SCHOOL', 1)">+</button>
+            </div>
+          </div>
+          <div class="count-row" data-type="INDUSTRIAL">
+            <span class="count-swatch" style="background:#f97316"></span>
+            <span class="count-label">Industrial</span>
+            <div class="stepper stepper-sm">
+              <button class="stepper-btn" onclick="adjustCount('INDUSTRIAL', -1)">−</button>
+              <input class="stepper-input" type="number" id="count_INDUSTRIAL" value="3" min="0" max="200" oninput="updateTotal()">
+              <button class="stepper-btn" onclick="adjustCount('INDUSTRIAL', 1)">+</button>
+            </div>
+          </div>
+          <div class="count-row" data-type="POWER_PLANT">
+            <span class="count-swatch" style="background:#a855f7"></span>
+            <span class="count-label">Power Plant</span>
+            <div class="stepper stepper-sm">
+              <button class="stepper-btn" onclick="adjustCount('POWER_PLANT', -1)">−</button>
+              <input class="stepper-input" type="number" id="count_POWER_PLANT" value="3" min="0" max="200" oninput="updateTotal()">
+              <button class="stepper-btn" onclick="adjustCount('POWER_PLANT', 1)">+</button>
+            </div>
+          </div>
+          <div class="count-row" data-type="AMBULANCE_DEPOT">
+            <span class="count-swatch" style="background:#06b6d4"></span>
+            <span class="count-label">Depot</span>
+            <div class="stepper stepper-sm">
+              <button class="stepper-btn" onclick="adjustCount('AMBULANCE_DEPOT', -1)">−</button>
+              <input class="stepper-input" type="number" id="count_AMBULANCE_DEPOT" value="1" min="0" max="200" oninput="updateTotal()">
+              <button class="stepper-btn" onclick="adjustCount('AMBULANCE_DEPOT', 1)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="capacity-bar-wrap">
+          <div class="capacity-label">
+            <span>Capacity</span>
+            <span id="total_text" class="mono">25 / 25</span>
+          </div>
+          <div class="capacity-bar-track">
+            <div class="capacity-bar-fill" id="capacity_fill" style="width:100%"></div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="btn_csp" onclick="runCSP()">
+          <span class="btn-icon">▶</span> Run CSP
+        </button>
+
+        <div class="btn-pair">
+          <button class="btn btn-ghost" id="btn_save" onclick="saveGrid()" disabled>💾 Save Grid</button>
+          <button class="btn btn-ghost" onclick="loadGrid()">📂 Load Grid</button>
+        </div>
+
+        <div class="status-line" id="status_c1">
+          <span class="dot dot-idle" id="dot_c1"></span>
+          <span id="text_c1" class="mono-sm">Idle</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Steps</span>
+          <span class="stat-value mono" id="csp_steps">—</span>
+        </div>
+      </section>
+
+      <!-- ── Challenge 2 ── -->
+      <section class="panel" id="panel_c2">
+        <div class="panel-header">
+          <div class="panel-badge badge-c2">C2</div>
+          <div class="panel-title-group">
+            <h2 class="panel-title">Road Network</h2>
+            <span class="algo-chip">MST</span>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" id="btn_roads" onclick="runRoads()" disabled>
+          <span class="btn-icon">▶</span> Build Roads
+        </button>
+
+        <div class="status-line" id="status_c2">
+          <span class="dot dot-idle" id="dot_c2"></span>
+          <span id="text_c2" class="mono-sm">Run C1 first</span>
+        </div>
+
+        <div class="stats-block" id="stats_c2">
+          <div class="stat-row">
+            <span class="stat-label">Nodes</span>
+            <span class="stat-value mono" id="c2_nodes">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">MST Roads</span>
+            <span class="stat-value mono" id="c2_mst">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Backup Roads</span>
+            <span class="stat-value mono" id="c2_extra">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Primary Path</span>
+            <span class="stat-value mono" id="c2_path1">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Backup Path</span>
+            <span class="stat-value mono" id="c2_path2">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Challenge 3 ── -->
+      <section class="panel" id="panel_c3">
+        <div class="panel-header">
+          <div class="panel-badge badge-c3">C3</div>
+          <div class="panel-title-group">
+            <h2 class="panel-title">Ambulances</h2>
+            <span class="algo-chip">GA</span>
+          </div>
+        </div>
+
+        <button class="btn btn-tertiary" id="btn_ambulance" onclick="runAmbulance()" disabled>
+          <span class="btn-icon">▶</span> Place Ambulances
+        </button>
+
+        <div class="status-line" id="status_c3">
+          <span class="dot dot-idle" id="dot_c3"></span>
+          <span id="text_c3" class="mono-sm">Run C2 first</span>
+        </div>
+
+        <div class="stats-block" id="stats_c3">
+          <div class="stat-row">
+            <span class="stat-label">Placements</span>
+            <span class="stat-value mono" id="c3_placements">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Worst Dist.</span>
+            <span class="stat-value mono" id="c3_worst">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Coverage</span>
+            <span class="stat-value mono" id="c3_coverage">—</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Legend ── -->
+      <section class="panel panel-legend">
+        <h3 class="legend-title">Legend</h3>
+        <div class="legend-grid">
+          <div class="legend-item"><span class="legend-swatch" style="background:#22c55e"></span><span>Residential (R)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#ef4444"></span><span>Hospital (H)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#7f1d1d"></span><span>Primary Hospital</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#3b82f6"></span><span>School (S)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#f97316"></span><span>Industrial (I)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#a855f7"></span><span>Power Plant (P)</span></div>
+          <div class="legend-item"><span class="legend-swatch" style="background:#06b6d4"></span><span>Depot (A)</span></div>
+          <div class="legend-item"><span class="legend-swatch road-swatch"></span><span>Road (MST)</span></div>
+          <div class="legend-item"><span class="legend-swatch path1-swatch"></span><span>Primary Path</span></div>
+          <div class="legend-item"><span class="legend-swatch path2-swatch"></span><span>Backup Path</span></div>
+          <div class="legend-item"><span class="legend-swatch ambo-swatch"></span><span>Ambulance 🚑</span></div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ═══════════════════ CANVAS AREA ═══════════════════ -->
+    <main class="viewport">
+      <div class="canvas-container" id="canvas_container">
+        <div class="canvas-placeholder" id="canvas_placeholder">
+          <div class="placeholder-icon">⬡</div>
+          <p class="placeholder-text">Configure the grid and run CSP<br>to generate your city layout</p>
+        </div>
+        <canvas id="city_canvas"></canvas>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
