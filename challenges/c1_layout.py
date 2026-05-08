@@ -13,6 +13,8 @@ Run from terminal:
 from enum import Enum
 from collections import deque
 
+from scipy import stats
+
 # Location types
 class LocationType(Enum):
     EMPTY       = "EMPTY"
@@ -362,7 +364,11 @@ def revise(xi, xj, domains, grid):
     return revised
 
 # Backtracking search
-def backtrack(grid, domains, remaining_counts):
+def backtrack(grid, domains, remaining_counts, depth=0):
+    stats.steps += 1
+    stats.depth = depth
+    stats.max_depth = max(stats.max_depth, depth)
+    
     # Base case: every cell has been assigned
     if next(grid.unassigned_cells(), None) is None:
         return True
@@ -389,7 +395,7 @@ def backtrack(grid, domains, remaining_counts):
             saved_domains = {c: list(v) for c, v in domains.items()}
 
             if ac3(grid, domains):
-                if backtrack(grid, domains, remaining_counts):
+                if backtrack(grid, domains, remaining_counts, depth + 1):
                     return True
 
             # Restore pruned domains
@@ -466,26 +472,23 @@ def assign_simulation_properties(grid):
             cell.risk_index = risk
 
 
-# Main entry point
-def run_layout(grid_size=8, required_counts=None):
+def run_layout(grid_size, required_counts):
     if required_counts is None:
-        required_counts = {
-            LocationType.RESIDENTIAL:    40,  # majority
-            LocationType.HOSPITAL:        8,
-            LocationType.SCHOOL:          5,
-            LocationType.INDUSTRIAL:      5,
-            LocationType.POWER_PLANT:     3,
-            LocationType.AMBULANCE_DEPOT: 3,
-        }
+        raise ValueError("required_counts must come from UI")
+
+    total_cells = grid_size * grid_size
+    used = sum(required_counts.values())
+
+    if used > total_cells:
+        raise ValueError(
+            f"Too many buildings ({used}) for grid size {total_cells}"
+        )
 
     grid = Grid(grid_size)
 
-    # EMPTY fills whatever cells remain after the required types are placed
-    total_cells = grid_size * grid_size
     remaining_counts = dict(required_counts)
-    remaining_counts[LocationType.EMPTY] = total_cells - sum(required_counts.values())
+    remaining_counts[LocationType.EMPTY] = total_cells - used
 
-    # Every unassigned cell starts with all types that still have quota
     domains = {
         cell: [lt for lt, cnt in remaining_counts.items() if cnt > 0]
         for row in grid.cells
@@ -497,8 +500,7 @@ def run_layout(grid_size=8, required_counts=None):
     if success:
         violations = []
     else:
-        print("[C1] Backtracking could not find a perfect layout.")
-        print("[C1] Falling back to minimum-conflict placement...")
+        print("[C1] Backtracking failed, using fallback...")
         grid, violations = minimum_conflict_layout(grid, required_counts)
 
     assign_simulation_properties(grid)
