@@ -424,29 +424,3 @@ def run_roads(grid: Grid) -> nx.Graph:
 
     print(f"[C2] Final road network: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges.")
     return G
-
-
-# ── Standalone test ────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    from challenges.c1_layout import run_layout, LocationType
-
-    # Small test grid
-    grid_size = 6
-    required_counts = {
-        LocationType.RESIDENTIAL:     8,
-        LocationType.HOSPITAL:        1,
-        LocationType.SCHOOL:          2,
-        LocationType.INDUSTRIAL:      2,
-        LocationType.POWER_PLANT:     1,
-        LocationType.AMBULANCE_DEPOT: 1,
-    }
-
-    print("=== Running Challenge 1 (layout) ===")
-    grid, violations = run_layout(grid_size, required_counts)
-    grid.display()
-
-    print("\n=== Running Challenge 2 (roads) ===")
-    G = run_roads(grid)
-
-    print(f"\nNodes : {list(G.nodes)[:5]} ...")
-    print(f"Edges : {list(G.edges(data=True))[:3]} ...")
