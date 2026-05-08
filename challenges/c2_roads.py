@@ -7,7 +7,9 @@ from core.city_graph import CityGraph
 
 
 def _edge_base_cost(cell_a, cell_b) -> float:
-    return 1.0 + cell_a.risk_index + cell_b.risk_index
+    if cell_a.location_type == LocationType.RESIDENTIAL or cell_b.location_type == LocationType.RESIDENTIAL:
+        return 0.8
+    return 1.0
 
 
 def build_candidate_edges(grid: Grid) -> list:

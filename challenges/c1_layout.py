@@ -3,6 +3,41 @@ from collections import deque
 import random
 
 from scipy import stats
+import json
+
+def save_grid(grid, filepath="saved_grid.json"):
+    data = []
+    for r in range(grid.size):
+        for c in range(grid.size):
+            cell = grid.get_cell(r, c)
+            data.append({
+                "row": r,
+                "col": c,
+                "location_type": cell.location_type.value if cell.location_type else None,
+                "population_density": cell.population_density,
+                "risk_index": cell.risk_index,
+                "accessible": cell.accessible
+            })
+    with open(filepath, "w") as f:
+        json.dump({"size": grid.size, "cells": data}, f, indent=2)
+    print(f"[C1] Grid saved to {filepath}")
+
+def load_grid(filepath="saved_grid.json"):
+    with open(filepath, "r") as f:
+        data = json.load(f)
+    
+    grid = Grid(data["size"])
+    type_map = {lt.value: lt for lt in LocationType}
+    
+    for cell_data in data["cells"]:
+        cell = grid.get_cell(cell_data["row"], cell_data["col"])
+        cell.location_type = type_map.get(cell_data["location_type"])
+        cell.population_density = cell_data["population_density"]
+        cell.risk_index = cell_data["risk_index"]
+        cell.accessible = cell_data["accessible"]
+    
+    print(f"[C1] Grid loaded from {filepath}")
+    return grid
 
 # Location types
 class LocationType(Enum):
@@ -287,6 +322,7 @@ def select_unassigned_variable(grid, domains):
     return best_cell
 
 def order_domain_values(cell, domain, grid, domains):
+    random.shuffle(domain)
     def count_eliminations(value):
         eliminations = 0
         cell.location_type = value
@@ -500,8 +536,13 @@ def run_layout(grid_size, required_counts):
         )
 
     grid = Grid(grid_size)
-
-    remaining_counts = dict(required_counts)
+    remaining_counts = {}
+    remaining_counts[LocationType.HOSPITAL] = required_counts.get(LocationType.HOSPITAL, 0)
+    remaining_counts[LocationType.AMBULANCE_DEPOT] = required_counts.get(LocationType.AMBULANCE_DEPOT, 0)
+    remaining_counts[LocationType.SCHOOL] = required_counts.get(LocationType.SCHOOL, 0)
+    remaining_counts[LocationType.INDUSTRIAL] = required_counts.get(LocationType.INDUSTRIAL, 0)
+    remaining_counts[LocationType.POWER_PLANT] = required_counts.get(LocationType.POWER_PLANT, 0)
+    remaining_counts[LocationType.RESIDENTIAL] = required_counts.get(LocationType.RESIDENTIAL, 0)
     remaining_counts[LocationType.EMPTY] = total_cells - used
 
     domains = {

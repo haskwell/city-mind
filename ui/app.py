@@ -1,3 +1,4 @@
+import math
 import tkinter as tk
 from tkinter import ttk
 import threading
@@ -5,6 +6,7 @@ import threading
 from scipy import stats
 from challenges.c1_layout import run_layout, LocationType
 from challenges.c2_roads import run_roads
+from challenges.c3_ambulance import run_ambulance
 
 COLORS = {
     LocationType.EMPTY:           "#f0f0f0",
@@ -32,6 +34,7 @@ ROAD_COLOR         = "#ECF0F1"
 ROAD_BLOCKED_COLOR = "#E74C3C"
 PATH1_COLOR        = "#F1C40F"
 PATH2_COLOR        = "#1ABC9C"
+AMBULANCE_COLOR    = "#FF4081"
 ROAD_WIDTH         = 3
 
 
@@ -39,16 +42,33 @@ class App:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("CityMind — Urban Intelligence System")
+        self.root.state('zoomed')  # Windows fullscreen/maximized
 
-        self.cell_size  = 55
-        self.grid       = None
-        self.city_graph = None
-        self.path1      = None
-        self.path2      = None
+        self.cell_size       = 55
+        self.grid            = None
+        self.city_graph      = None
+        self.path1           = None
+        self.path2           = None
+        self.ambulance_result = None
 
-        self.left = tk.Frame(self.root, padx=10, pady=10, width=220)
-        self.left.pack(side="left", fill="y")
-        self.left.pack_propagate(False)
+        # Create scrollable left panel
+        left_canvas = tk.Canvas(self.root, width=340)
+        left_scrollbar = ttk.Scrollbar(self.root, orient="vertical", command=left_canvas.yview)
+        self.left = ttk.Frame(left_canvas)
+        
+        self.left.bind(
+            "<Configure>",
+            lambda e: left_canvas.configure(scrollregion=left_canvas.bbox("all"))
+        )
+        
+        left_canvas.create_window((0, 0), window=self.left, anchor="nw")
+        left_canvas.configure(yscrollcommand=left_scrollbar.set)
+        
+        left_canvas.pack(side="left", fill="y")
+        left_scrollbar.pack(side="left", fill="y")
+        
+        # Add padding to the frame inside canvas
+        self.left.configure(padding=10)
 
         self.right = tk.Frame(self.root)
         self.right.pack(side="right", fill="both", expand=True)
@@ -127,7 +147,17 @@ class App:
             command=self.run_csp
         )
         self.run_csp_btn.pack(fill="x", pady=4)
+        self.save_grid_btn = tk.Button(
+            self.left, text="💾  Save Grid",
+            command=self.save_grid
+        )
+        self.save_grid_btn.pack(fill="x", pady=2)
 
+        self.load_grid_btn = tk.Button(
+            self.left, text="📂  Load Grid",
+            command=self.load_grid
+        )
+        self.load_grid_btn.pack(fill="x", pady=2)
         self.progress_label = tk.Label(self.left, text="Idle", fg="#2980B9")
         self.progress_label.pack()
         self.step_label  = tk.Label(self.left, text="Steps: 0")
@@ -144,7 +174,7 @@ class App:
 
         self.run_roads_btn = tk.Button(
             self.left, text="▶  Build Roads (Challenge 2)",
-            bg="#3498DB", fg="white",
+            bg="#2980B9", fg="white",
             font=("Arial", 10, "bold"),
             state="disabled",
             command=self.run_roads
@@ -168,6 +198,36 @@ class App:
         self.roads_path2_label.pack()
 
         ttk.Separator(self.left, orient="horizontal").pack(fill="x", pady=8)
+
+        tk.Label(
+            self.left, text="Challenge 3 — Ambulance Placement (GA)",
+            font=("Arial", 11, "bold"), fg="#2C3E50"
+        ).pack(anchor="w", pady=(0, 4))
+
+        self.run_ambulance_btn = tk.Button(
+            self.left, text="▶  Place Ambulances (Challenge 3)",
+            bg="#6C3483", fg="white",
+            font=("Arial", 10, "bold"),
+            state="disabled",
+            command=self.run_ambulance_challenge
+        )
+        self.run_ambulance_btn.pack(fill="x", pady=4)
+
+        self.ambulance_status_label = tk.Label(
+            self.left, text="Run Challenge 2 first.", fg="#7F8C8D"
+        )
+        self.ambulance_status_label.pack()
+
+        self.ambulance_placements_label = tk.Label(self.left, text="Placements: —")
+        self.ambulance_placements_label.pack()
+
+        self.ambulance_worst_label = tk.Label(self.left, text="Worst-case dist: —")
+        self.ambulance_worst_label.pack()
+
+        self.ambulance_covered_label = tk.Label(self.left, text="Citizens covered: —")
+        self.ambulance_covered_label.pack()
+
+        ttk.Separator(self.left, orient="horizontal").pack(fill="x", pady=8)
         tk.Label(
             self.left, text="Legend",
             font=("Arial", 10, "bold")
@@ -176,9 +236,10 @@ class App:
 
     def _build_legend(self):
         legend_items = [
-            (ROAD_COLOR,  "Road (MST)"),
-            (PATH1_COLOR, "Primary H→D path"),
-            (PATH2_COLOR, "Backup H→D path"),
+            (ROAD_COLOR,      "Road (MST)"),
+            (PATH1_COLOR,     "Primary H→D path"),
+            (PATH2_COLOR,     "Backup H→D path"),
+            (AMBULANCE_COLOR, "Ambulance position"),
         ]
         for color, label in legend_items:
             row = tk.Frame(self.left)
@@ -188,9 +249,13 @@ class App:
             tk.Label(row, text=label, anchor="w").pack(side="left")
 
         for lt, label in [
-            (LocationType.HOSPITAL,        "Hospital (H)"),
+            (LocationType.RESIDENTIAL,     "Residential (R)"),
+            (LocationType.HOSPITAL,         "Hospital (H)"),
             (LocationType.PRIMARY_HOSPITAL, "Primary Hospital (H)"),
-            (LocationType.AMBULANCE_DEPOT, "Ambulance Depot (A)"),
+            (LocationType.SCHOOL,          "School (S)"),
+            (LocationType.INDUSTRIAL,      "Industrial (I)"),
+            (LocationType.POWER_PLANT,     "Power Plant (P)"),
+            (LocationType.AMBULANCE_DEPOT,  "Ambulance Depot (A)"),
         ]:
             row = tk.Frame(self.left)
             row.pack(fill="x", pady=1, anchor="w")
@@ -215,6 +280,7 @@ class App:
     def run_csp(self):
         self.run_csp_btn.config(state="disabled")
         self.run_roads_btn.config(state="disabled")
+        self.run_ambulance_btn.config(state="disabled")
         self.running = True
 
         stats.steps     = 0
@@ -232,6 +298,29 @@ class App:
         threading.Thread(target=worker, daemon=True).start()
         self.update_progress_ui()
 
+
+    def save_grid(self):
+        if self.grid is None:
+            return
+        from challenges.c1_layout import save_grid
+        save_grid(self.grid)
+
+    def load_grid(self):
+        from challenges.c1_layout import load_grid
+        import os
+        if not os.path.exists("saved_grid.json"):
+            self.progress_label.config(text="No saved grid found.", fg="red")
+            return
+        self.grid = load_grid()
+        self.city_graph = None
+        self.path1 = None
+        self.path2 = None
+        self.ambulance_result = None
+        self.draw_grid()
+        self.progress_label.config(text="Grid loaded ✓", fg="#27AE60")
+        self.run_roads_btn.config(state="normal")
+        self.roads_status_label.config(text="Ready — click Build Roads.", fg="#2980B9")
+
     def update_progress_ui(self):
         self.step_label.config(text=f"Steps: {stats.steps}")
         self.depth_label.config(text=f"Depth: {stats.depth} / Max {stats.max_depth}")
@@ -239,11 +328,12 @@ class App:
             self.root.after(100, self.update_progress_ui)
 
     def finish_csp(self, grid, violations):
-        self.running    = False
-        self.grid       = grid
-        self.city_graph = None
-        self.path1      = None
-        self.path2      = None
+        self.running     = False
+        self.grid        = grid
+        self.city_graph  = None
+        self.path1       = None
+        self.path2       = None
+        self.ambulance_result = None
 
         self.draw_grid()
 
@@ -256,14 +346,19 @@ class App:
 
         self.run_csp_btn.config(state="normal")
         self.run_roads_btn.config(state="normal")
-        self.roads_status_label.config(
-            text="Ready — click Build Roads.", fg="#2980B9"
-        )
+        self.run_ambulance_btn.config(state="disabled")
+
+        self.roads_status_label.config(text="Ready — click Build Roads.", fg="#2980B9")
         self.roads_nodes_label.config(text="Nodes: —")
         self.roads_edges_label.config(text="Roads (MST): —")
         self.roads_extra_label.config(text="Extra (backup): —")
         self.roads_path1_label.config(text="Primary path: —")
         self.roads_path2_label.config(text="Backup path: —")
+
+        self.ambulance_status_label.config(text="Run Challenge 2 first.", fg="#7F8C8D")
+        self.ambulance_placements_label.config(text="Placements: —")
+        self.ambulance_worst_label.config(text="Worst-case dist: —")
+        self.ambulance_covered_label.config(text="Citizens covered: —")
 
     def run_roads(self):
         if self.grid is None:
@@ -271,6 +366,7 @@ class App:
 
         self.run_roads_btn.config(state="disabled")
         self.run_csp_btn.config(state="disabled")
+        self.run_ambulance_btn.config(state="disabled")
         self.roads_status_label.config(text="Building road network…", fg="#E67E22")
 
         def worker():
@@ -280,9 +376,10 @@ class App:
         threading.Thread(target=worker, daemon=True).start()
 
     def finish_roads(self, cg, path1, path2):
-        self.city_graph = cg
-        self.path1      = path1
-        self.path2      = path2
+        self.city_graph      = cg
+        self.path1           = path1
+        self.path2           = path2
+        self.ambulance_result = None
 
         mst_edge_count   = sum(1 for _, _, d in cg.edges(data=True) if not d.get("redundancy", False))
         extra_edge_count = sum(1 for _, _, d in cg.edges(data=True) if d.get("redundancy", False))
@@ -301,6 +398,51 @@ class App:
         self.draw_grid()
         self.draw_roads()
 
+        self.run_roads_btn.config(state="normal")
+        self.run_csp_btn.config(state="normal")
+        self.run_ambulance_btn.config(state="normal")
+
+        self.ambulance_status_label.config(text="Ready — click Place Ambulances.", fg="#2980B9")
+        self.ambulance_placements_label.config(text="Placements: —")
+        self.ambulance_worst_label.config(text="Worst-case dist: —")
+        self.ambulance_covered_label.config(text="Citizens covered: —")
+
+    def run_ambulance_challenge(self):
+        if self.city_graph is None:
+            return
+
+        self.run_ambulance_btn.config(state="disabled")
+        self.run_roads_btn.config(state="disabled")
+        self.run_csp_btn.config(state="disabled")
+        self.ambulance_status_label.config(text="Running GA…", fg="#E67E22")
+
+        def worker():
+            result = run_ambulance(self.city_graph)
+            self.root.after(0, lambda: self.finish_ambulance(result))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def finish_ambulance(self, result):
+        self.ambulance_result = result
+
+        placements   = result.get("placements", [])
+        worst        = result.get("worst_case_distance", math.inf)
+        coverage     = result.get("coverage", {})
+
+        covered      = sum(1 for d in coverage.values() if d < math.inf)
+        total_cit    = len(coverage)
+
+        self.ambulance_status_label.config(text="Ambulances placed ✓", fg="#27AE60")
+        self.ambulance_placements_label.config(text=f"Placements: {len(placements)}")
+        worst_text = f"{worst:.2f}" if worst < math.inf else "∞"
+        self.ambulance_worst_label.config(text=f"Worst-case dist: {worst_text}")
+        self.ambulance_covered_label.config(text=f"Citizens covered: {covered}/{total_cit}")
+
+        self.draw_grid()
+        self.draw_roads()
+        self.draw_ambulances()
+
+        self.run_ambulance_btn.config(state="normal")
         self.run_roads_btn.config(state="normal")
         self.run_csp_btn.config(state="normal")
 
@@ -414,6 +556,28 @@ class App:
                         font=("Arial", 14, "bold"),
                         tags="label"
                     )
+
+    def draw_ambulances(self):
+        if self.ambulance_result is None:
+            return
+
+        placements = self.ambulance_result.get("placements", [])
+        r_marker   = self.cell_size // 5
+
+        for node in placements:
+            row, col = node
+            cx, cy   = self._cell_centre(row, col)
+            self.canvas.create_oval(
+                cx - r_marker, cy - r_marker,
+                cx + r_marker, cy + r_marker,
+                fill=AMBULANCE_COLOR, outline="white", width=2,
+                tags="ambulance"
+            )
+            self.canvas.create_text(
+                cx, cy,
+                text="🚑", font=("Arial", 10),
+                tags="ambulance"
+            )
 
     def run(self):
         self.root.mainloop()
