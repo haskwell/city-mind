@@ -1,17 +1,6 @@
-"""
-Challenge 1: City Layout Planning
-----------------------------------
-Uses CSP with Backtracking + MAC (AC-3) to assign location types to grid cells.
-
-Input  : grid size (N), counts of each location type to place
-Output : a filled Grid object where every cell has an assigned LocationType
-
-Run from terminal:
-    python c1_layout.py
-"""
-
 from enum import Enum
 from collections import deque
+import random
 
 from scipy import stats
 
@@ -20,6 +9,7 @@ class LocationType(Enum):
     EMPTY       = "EMPTY"
     RESIDENTIAL = "RESIDENTIAL"
     HOSPITAL    = "HOSPITAL"
+    PRIMARY_HOSPITAL = "PRIMARY_HOSPITAL"
     SCHOOL      = "SCHOOL"
     INDUSTRIAL  = "INDUSTRIAL"
     POWER_PLANT = "POWER_PLANT"
@@ -504,4 +494,7 @@ def run_layout(grid_size, required_counts):
         grid, violations = minimum_conflict_layout(grid, required_counts)
 
     assign_simulation_properties(grid)
+    hospitals = list(grid.cells_of_type(LocationType.HOSPITAL))
+    if hospitals:
+        random.choice(hospitals).location_type = LocationType.PRIMARY_HOSPITAL
     return grid, violations

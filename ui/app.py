@@ -6,11 +6,11 @@ from scipy import stats
 from challenges.c1_layout import run_layout, LocationType
 from challenges.c2_roads import run_roads
 
-# ── Colours and labels shared across both challenges ──────────────────────────
 COLORS = {
     LocationType.EMPTY:           "#f0f0f0",
     LocationType.RESIDENTIAL:     "#4CAF50",
     LocationType.HOSPITAL:        "#F44336",
+    LocationType.PRIMARY_HOSPITAL: "#FF1744",
     LocationType.SCHOOL:          "#2196F3",
     LocationType.INDUSTRIAL:      "#FF9800",
     LocationType.POWER_PLANT:     "#9C27B0",
@@ -21,17 +21,17 @@ LABELS = {
     LocationType.EMPTY:           "",
     LocationType.RESIDENTIAL:     "R",
     LocationType.HOSPITAL:        "H",
+    LocationType.PRIMARY_HOSPITAL: "H",
     LocationType.SCHOOL:          "S",
     LocationType.INDUSTRIAL:      "I",
     LocationType.POWER_PLANT:     "P",
     LocationType.AMBULANCE_DEPOT: "A",
 }
 
-# Road drawing colours
-ROAD_COLOR         = "#ECF0F1"   # normal MST road
-ROAD_BLOCKED_COLOR = "#E74C3C"   # blocked road (future use)
-PATH1_COLOR        = "#F1C40F"   # primary hospital→depot path
-PATH2_COLOR        = "#1ABC9C"   # secondary (backup) path
+ROAD_COLOR         = "#ECF0F1"
+ROAD_BLOCKED_COLOR = "#E74C3C"
+PATH1_COLOR        = "#F1C40F"
+PATH2_COLOR        = "#1ABC9C"
 ROAD_WIDTH         = 3
 
 
@@ -40,13 +40,12 @@ class App:
         self.root = tk.Tk()
         self.root.title("CityMind — Urban Intelligence System")
 
-        self.cell_size = 55
-        self.grid      = None   # set after C1 finishes
-        self.city_graph = None  # set after C2 finishes
-        self.path1      = None  # primary hospital→depot path
-        self.path2      = None  # backup  hospital→depot path
+        self.cell_size  = 55
+        self.grid       = None
+        self.city_graph = None
+        self.path1      = None
+        self.path2      = None
 
-        # ── Root layout: left controls panel + right canvas ──────────────────
         self.left = tk.Frame(self.root, padx=10, pady=10, width=220)
         self.left.pack(side="left", fill="y")
         self.left.pack_propagate(False)
@@ -54,38 +53,25 @@ class App:
         self.right = tk.Frame(self.root)
         self.right.pack(side="right", fill="both", expand=True)
 
-        # ── Canvas (shared by both C1 grid view and C2 overlay) ──────────────
         self.canvas = tk.Canvas(self.right, bg="#34495e")
         self.canvas.pack(fill="both", expand=True)
 
-        # ── Build left panel content ──────────────────────────────────────────
         self._build_left_panel()
-
         self.update_total()
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # LEFT PANEL CONSTRUCTION
-    # ══════════════════════════════════════════════════════════════════════════
-
     def _build_left_panel(self):
-        """Build every widget in the left control panel."""
-
-        # ── Title ─────────────────────────────────────────────────────────────
         tk.Label(
             self.left, text="CityMind Controls",
             font=("Arial", 14, "bold")
         ).pack(pady=(10, 4))
 
-        # ── Separator ────────────────────────────────────────────────────────
         ttk.Separator(self.left, orient="horizontal").pack(fill="x", pady=4)
 
-        # ── CHALLENGE 1 section ───────────────────────────────────────────────
         tk.Label(
             self.left, text="Challenge 1 — City Layout (CSP)",
             font=("Arial", 11, "bold"), fg="#2C3E50"
         ).pack(anchor="w", pady=(6, 2))
 
-        # Grid size
         row_gs = tk.Frame(self.left)
         row_gs.pack(fill="x", pady=2)
         tk.Label(row_gs, text="Grid Size", width=18, anchor="w").pack(side="left")
@@ -97,7 +83,6 @@ class App:
             command=self.update_total
         ).pack(side="right")
 
-        # Location type counts
         self.count_vars = {}
         for lt in [
             LocationType.RESIDENTIAL,
@@ -121,13 +106,11 @@ class App:
             sp.pack(side="right")
             var.trace_add("write", lambda *_: self.update_total())
 
-        # Total counter
         self.total_label = tk.Label(
             self.left, text="", font=("Arial", 11, "bold")
         )
         self.total_label.pack(pady=6)
 
-        # Run CSP button
         self.run_csp_btn = tk.Button(
             self.left, text="▶  Run CSP (Challenge 1)",
             bg="#2ECC71", fg="white",
@@ -136,7 +119,6 @@ class App:
         )
         self.run_csp_btn.pack(fill="x", pady=4)
 
-        # CSP progress readouts
         self.progress_label = tk.Label(self.left, text="Idle", fg="#2980B9")
         self.progress_label.pack()
         self.step_label  = tk.Label(self.left, text="Steps: 0")
@@ -144,32 +126,27 @@ class App:
         self.depth_label = tk.Label(self.left, text="Depth: 0")
         self.depth_label.pack()
 
-        # ── Separator ────────────────────────────────────────────────────────
         ttk.Separator(self.left, orient="horizontal").pack(fill="x", pady=8)
 
-        # ── CHALLENGE 2 section ───────────────────────────────────────────────
         tk.Label(
             self.left, text="Challenge 2 — Road Network",
             font=("Arial", 11, "bold"), fg="#2C3E50"
         ).pack(anchor="w", pady=(0, 4))
 
-        # Run Roads button
         self.run_roads_btn = tk.Button(
             self.left, text="▶  Build Roads (Challenge 2)",
             bg="#3498DB", fg="white",
             font=("Arial", 10, "bold"),
-            state="disabled",            # enabled only after C1 succeeds
+            state="disabled",
             command=self.run_roads
         )
         self.run_roads_btn.pack(fill="x", pady=4)
 
-        # C2 status
         self.roads_status_label = tk.Label(
             self.left, text="Run Challenge 1 first.", fg="#7F8C8D"
         )
         self.roads_status_label.pack()
 
-        # C2 result readouts
         self.roads_nodes_label = tk.Label(self.left, text="Nodes: —")
         self.roads_nodes_label.pack()
         self.roads_edges_label = tk.Label(self.left, text="Roads (MST): —")
@@ -181,7 +158,6 @@ class App:
         self.roads_path2_label = tk.Label(self.left, text="Backup path: —")
         self.roads_path2_label.pack()
 
-        # ── Legend ────────────────────────────────────────────────────────────
         ttk.Separator(self.left, orient="horizontal").pack(fill="x", pady=8)
         tk.Label(
             self.left, text="Legend",
@@ -190,7 +166,6 @@ class App:
         self._build_legend()
 
     def _build_legend(self):
-        """Small colour legend at the bottom of the left panel."""
         legend_items = [
             (ROAD_COLOR,  "Road (MST)"),
             (PATH1_COLOR, "Primary H→D path"),
@@ -205,6 +180,7 @@ class App:
 
         for lt, label in [
             (LocationType.HOSPITAL,        "Hospital (H)"),
+            (LocationType.PRIMARY_HOSPITAL, "Primary Hospital (H)"),
             (LocationType.AMBULANCE_DEPOT, "Ambulance Depot (A)"),
         ]:
             row = tk.Frame(self.left)
@@ -212,10 +188,6 @@ class App:
             tk.Canvas(row, width=16, height=16, bg=COLORS[lt],
                       highlightthickness=1, highlightbackground="#999").pack(side="left", padx=(0, 6))
             tk.Label(row, text=label, anchor="w").pack(side="left")
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # TOTAL VALIDATION
-    # ══════════════════════════════════════════════════════════════════════════
 
     def update_total(self):
         size     = self.grid_size_var.get()
@@ -231,17 +203,13 @@ class App:
             self.total_label.config(fg="#27AE60")
             self.run_csp_btn.config(state="normal")
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # CHALLENGE 1 — RUN CSP
-    # ══════════════════════════════════════════════════════════════════════════
-
     def run_csp(self):
         self.run_csp_btn.config(state="disabled")
         self.run_roads_btn.config(state="disabled")
         self.running = True
 
-        stats.steps    = 0
-        stats.depth    = 0
+        stats.steps     = 0
+        stats.depth     = 0
         stats.max_depth = 0
 
         self.progress_label.config(text="Running CSP…", fg="#E67E22")
@@ -264,11 +232,11 @@ class App:
     def finish_csp(self, grid, violations):
         self.running    = False
         self.grid       = grid
-        self.city_graph = None   # reset C2 result when C1 re-runs
+        self.city_graph = None
         self.path1      = None
         self.path2      = None
 
-        self.draw_grid()         # draw just the grid (no roads yet)
+        self.draw_grid()
 
         if violations:
             self.progress_label.config(
@@ -278,21 +246,15 @@ class App:
             self.progress_label.config(text="Solved successfully ✓", fg="#27AE60")
 
         self.run_csp_btn.config(state="normal")
-        # Enable C2 only when C1 has a layout (even with violations)
         self.run_roads_btn.config(state="normal")
         self.roads_status_label.config(
             text="Ready — click Build Roads.", fg="#2980B9"
         )
-        # Reset C2 readouts
         self.roads_nodes_label.config(text="Nodes: —")
         self.roads_edges_label.config(text="Roads (MST): —")
         self.roads_extra_label.config(text="Extra (backup): —")
         self.roads_path1_label.config(text="Primary path: —")
         self.roads_path2_label.config(text="Backup path: —")
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # CHALLENGE 2 — BUILD ROADS
-    # ══════════════════════════════════════════════════════════════════════════
 
     def run_roads(self):
         if self.grid is None:
@@ -303,22 +265,21 @@ class App:
         self.roads_status_label.config(text="Building road network…", fg="#E67E22")
 
         def worker():
-            G, path1, path2 = run_roads(self.grid)
-            self.root.after(0, lambda: self.finish_roads(G, path1, path2))
+            cg, path1, path2 = run_roads(self.grid)
+            self.root.after(0, lambda: self.finish_roads(cg, path1, path2))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def finish_roads(self, G, path1, path2):
-        self.city_graph = G
+    def finish_roads(self, cg, path1, path2):
+        self.city_graph = cg
         self.path1      = path1
         self.path2      = path2
 
-        # Count MST edges vs extra redundancy edges
-        mst_edge_count   = sum(1 for _, _, d in G.edges(data=True) if not d.get("redundancy", False))
-        extra_edge_count = sum(1 for _, _, d in G.edges(data=True) if d.get("redundancy", False))
+        mst_edge_count   = sum(1 for _, _, d in cg.edges(data=True) if not d.get("redundancy", False))
+        extra_edge_count = sum(1 for _, _, d in cg.edges(data=True) if d.get("redundancy", False))
 
         self.roads_status_label.config(text="Road network built ✓", fg="#27AE60")
-        self.roads_nodes_label.config(text=f"Nodes: {G.number_of_nodes()}")
+        self.roads_nodes_label.config(text=f"Nodes: {cg.number_of_nodes()}")
         self.roads_edges_label.config(text=f"Roads (MST): {mst_edge_count}")
         self.roads_extra_label.config(text=f"Extra (backup): {extra_edge_count}")
         self.roads_path1_label.config(
@@ -328,26 +289,19 @@ class App:
             text=f"Backup path: {len(path2)-1} hops" if path2 else "Backup path: none ⚠"
         )
 
-        # Redraw the grid with the road overlay on top
         self.draw_grid()
         self.draw_roads()
 
         self.run_roads_btn.config(state="normal")
         self.run_csp_btn.config(state="normal")
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # DRAWING — GRID (Challenge 1 view, unchanged logic)
-    # ══════════════════════════════════════════════════════════════════════════
-
     def _cell_centre(self, row, col):
-        """Return the pixel (cx, cy) of the centre of cell (row, col)."""
         padding = 2
         x1 = col * self.cell_size + (col + 1) * padding
         y1 = row * self.cell_size + (row + 1) * padding
         return x1 + self.cell_size / 2, y1 + self.cell_size / 2
 
     def draw_grid(self):
-        """Draw all grid cells (clears canvas first)."""
         self.canvas.delete("all")
 
         if self.grid is None:
@@ -381,25 +335,12 @@ class App:
                         font=("Arial", 14, "bold")
                     )
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # DRAWING — ROADS (Challenge 2 overlay)
-    # ══════════════════════════════════════════════════════════════════════════
-
     def draw_roads(self):
-        """
-        Overlay roads on top of the already-drawn grid.
-
-        Drawing order (back → front so important paths are visible):
-          1. All MST roads          — thin white lines
-          2. Primary path (path1)   — yellow, slightly thicker
-          3. Backup  path (path2)   — teal,   slightly thicker
-        """
         if self.city_graph is None:
             return
 
-        G = self.city_graph
+        cg = self.city_graph
 
-        # Collect path edge sets for fast lookup
         path1_edges = set()
         if self.path1:
             for i in range(len(self.path1) - 1):
@@ -410,11 +351,10 @@ class App:
             for i in range(len(self.path2) - 1):
                 path2_edges.add(frozenset({self.path2[i], self.path2[i + 1]}))
 
-        # ── Pass 1: draw all roads (skip highlighted path edges for now) ──────
-        for u, v, data in G.edges(data=True):
+        for u, v, data in cg.edges(data=True):
             edge_key = frozenset({u, v})
             if edge_key in path1_edges or edge_key in path2_edges:
-                continue   # drawn in pass 2 / 3 on top
+                continue
 
             color  = ROAD_BLOCKED_COLOR if data.get("blocked", False) else ROAD_COLOR
             ux, uy = self._cell_centre(*u)
@@ -425,7 +365,6 @@ class App:
                 tags="road"
             )
 
-        # ── Pass 2: primary path (yellow) ─────────────────────────────────────
         for edge_key in path1_edges:
             u, v = tuple(edge_key)
             ux, uy = self._cell_centre(*u)
@@ -436,7 +375,6 @@ class App:
                 tags="path1"
             )
 
-        # ── Pass 3: backup path (teal) ────────────────────────────────────────
         for edge_key in path2_edges:
             u, v = tuple(edge_key)
             ux, uy = self._cell_centre(*u)
@@ -444,11 +382,10 @@ class App:
             self.canvas.create_line(
                 ux, uy, vx, vy,
                 fill=PATH2_COLOR, width=ROAD_WIDTH + 2,
-                dash=(6, 3),       # dashed so it's visually distinct from path1
+                dash=(6, 3),
                 tags="path2"
             )
 
-        # ── Pass 4: redraw node labels on top so roads don't cover them ───────
         if self.grid:
             size    = self.grid.size
             padding = 2
@@ -468,10 +405,6 @@ class App:
                         font=("Arial", 14, "bold"),
                         tags="label"
                     )
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # MAIN LOOP
-    # ══════════════════════════════════════════════════════════════════════════
 
     def run(self):
         self.root.mainloop()
