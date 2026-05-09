@@ -1,9 +1,10 @@
-import json
 import math
 import os
 import sys
 
 from challenges.c5_police import run_police
+from challenges.c5_clustering import run_clustering
+from challenges.c5_risk_prediction import run_risk_prediction
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -25,6 +26,8 @@ state = {
     "path2": None,
     "ambulance_result": None,
     "police_result": None,
+    "clustering_result": None,
+    "risk_result": None,
 }
 
 
@@ -166,27 +169,75 @@ def api_run_ambulance():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
     
-@app.route("/api/run_crime", methods=["POST"])
-def api_run_crime():
+@app.route("/api/run_clustering", methods=["POST"])
+def api_run_clustering():
     if state["city_graph"] is None:
         return jsonify({"success": False, "error": "Run Roads first"}), 400
     try:
         data = request.json or {}
         k = int(data.get("k", 0))
-        result = run_crime(state["city_graph"], k=k)
-        cluster_labels = result["cluster_labels"]
-        risk_levels    = result["risk_levels"]
-        explanations   = result["explanations"]
+        result = run_clustering(state["city_graph"], k=k)
+        state["clustering_result"] = result
         return jsonify({
-            "success":        True,
-            "high":           result["high_count"],
-            "medium":         result["medium_count"],
-            "low":            result["low_count"],
-            "cluster_labels": cluster_labels,
-            "risk_levels":    risk_levels,
-            "explanations":   explanations,
+            "success": True,
+            "cluster_labels": result["cluster_labels"],
+            "k_used": result["k_used"],
+            "inertia": result.get("inertia", 0),
+            "n_samples": result.get("n_samples", 0),
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@app.route("/api/run_risk_prediction", methods=["POST"])
+def api_run_risk_prediction():
+    if state["city_graph"] is None:
+        return jsonify({"success": False, "error": "Run Roads first"}), 400
+    try:
+        result = run_risk_prediction(state["city_graph"])
+        state["risk_result"] = result
+        return jsonify({
+            "success": True,
+            "high": result["high_count"],
+            "medium": result["medium_count"],
+            "low": result["low_count"],
+            "risk_levels": result["risk_levels"],
+            "explanations": result["explanations"],
             "model_analysis": result["model_analysis"],
-            "edges":          graph_to_json(state["city_graph"], None, None)["edges"],
+            "edges": graph_to_json(state["city_graph"], None, None)["edges"],
+            "n_samples": result.get("n_samples", 0),
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@app.route("/api/run_crime", methods=["POST"])
+def api_run_crime():
+    # Legacy endpoint - runs both clustering and risk prediction
+    if state["city_graph"] is None:
+        return jsonify({"success": False, "error": "Run Roads first"}), 400
+    try:
+        data = request.json or {}
+        k = int(data.get("k", 0))
+        
+        # Run clustering
+        clustering_result = run_clustering(state["city_graph"], k=k)
+        state["clustering_result"] = clustering_result
+        
+        # Run risk prediction
+        risk_result = run_risk_prediction(state["city_graph"])
+        state["risk_result"] = risk_result
+        
+        return jsonify({
+            "success": True,
+            "high": risk_result["high_count"],
+            "medium": risk_result["medium_count"],
+            "low": risk_result["low_count"],
+            "cluster_labels": clustering_result["cluster_labels"],
+            "risk_levels": risk_result["risk_levels"],
+            "explanations": risk_result["explanations"],
+            "model_analysis": risk_result["model_analysis"],
+            "edges": graph_to_json(state["city_graph"], None, None)["edges"],
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400

@@ -188,22 +188,31 @@
           </div>
         </div>
         <div class="field-row">
-        <label class="field-label">Clusters (0 = auto)</label>
-        <div class="stepper stepper-sm">
-          <button class="stepper-btn" onclick="adjustValue('crime_k', -1, 0, 10)">−</button>
-          <input class="stepper-input" type="number" id="crime_k" value="0" min="0" max="10">
-          <button class="stepper-btn" onclick="adjustValue('crime_k', 1, 0, 10)">+</button>
+          <label class="field-label">Clusters (0 = auto)</label>
+          <div class="stepper stepper-sm">
+            <button class="stepper-btn" onclick="adjustValue('crime_k', -1, 0, 10)">−</button>
+            <input class="stepper-input" type="number" id="crime_k" value="0" min="0" max="10">
+            <button class="stepper-btn" onclick="adjustValue('crime_k', 1, 0, 10)">+</button>
+          </div>
         </div>
-      </div>
-        <button class="btn btn-c5" id="btn_crime" onclick="runCrime()" disabled>
-          <span class="btn-icon">▶</span> Predict Risk
-        </button>
-        <button class="btn btn-ghost" id="btn_toggle_clusters" onclick="toggleClusters()" disabled>
-          ◉ Hide Clusters
-        </button>
-        <button class="btn btn-ghost" id="btn_police" onclick="runPolice()" disabled>
-          👮 Deploy Officers
-        </button>
+        
+        <div class="btn-group">
+          <button class="btn btn-c5" id="btn_clustering" onclick="runClustering()" disabled>
+            <span class="btn-icon">🔷</span> Run Clustering
+          </button>
+          <button class="btn btn-c5" id="btn_risk_prediction" onclick="runRiskPrediction()" disabled>
+            <span class="btn-icon">⚠️</span> Calculate Risk
+          </button>
+        </div>
+        
+        <div class="btn-pair">
+          <button class="btn btn-ghost" id="btn_toggle_clusters" onclick="toggleClusters()" disabled>
+            ◉ Hide Clusters
+          </button>
+          <button class="btn btn-ghost" id="btn_police" onclick="runPolice()" disabled>
+            👮 Deploy Officers
+          </button>
+        </div>
         <div class="stat-row">
           <span class="stat-label">Officers</span>
           <span class="stat-value mono" id="c6_count">—</span>
@@ -213,6 +222,8 @@
           <span id="text_c5" class="mono-sm">Run C2 first</span>
         </div>
         <div class="stats-block" id="stats_c5">
+          <div class="stat-row"><span class="stat-label">Clusters Used</span><span class="stat-value mono" id="c5_clusters">—</span></div>
+          <div class="stat-row"><span class="stat-label">Samples</span><span class="stat-value mono" id="c5_samples">—</span></div>
           <div class="stat-row"><span class="stat-label">High Risk</span><span class="stat-value mono" id="c5_high">—</span></div>
           <div class="stat-row"><span class="stat-label">Medium Risk</span><span class="stat-value mono" id="c5_medium">—</span></div>
           <div class="stat-row"><span class="stat-label">Low Risk</span><span class="stat-value mono" id="c5_low">—</span></div>
@@ -270,6 +281,7 @@
           <div class="legend-item"><span class="legend-swatch path1-swatch"></span><span>Primary Path</span></div>
           <div class="legend-item"><span class="legend-swatch path2-swatch"></span><span>Backup Path</span></div>
           <div class="legend-item"><span class="legend-swatch ambo-swatch"></span><span>Ambulance 🚑</span></div>
+          <div class="legend-item"><span class="legend-swatch police-swatch"></span><span>Police Officer 👮</span></div>
         </div>
       </section>
 

@@ -320,6 +320,8 @@ html, body {
 .btn-pair { display: flex; gap: 6px; }
 .btn-pair .btn { flex: 1; }
 
+.btn-group { display: flex; flex-direction: column; gap: 6px; }
+
 .btn-icon { font-size: 10px; }
 
 /* ── Status line ── */
@@ -403,6 +405,7 @@ html, body {
 .path1-swatch { background: #f59e0b; }
 .path2-swatch { background: #14b8a6; border: 1px dashed #14b8a6; }
 .ambo-swatch  { background: #ff4081; border-radius: 50%; }
+.police-swatch { background: #facc15; border-radius: 50%; }
 
 /* ════════════════════ VIEWPORT ════════════════════ */
 .viewport {

@@ -8,6 +8,8 @@ const state = {
   roads:      null,   // { edges[], path1, path2, ... }
   ambulance:  null,   // { placements[], ... }
   crime:      null,
+  clustering: null,   // { cluster_labels, k_used, ... }
+  risk:       null,   // { risk_levels, explanations, ... }
   showClusters: true,
   police:     null,   // { placements[], ... }
 };
@@ -528,7 +530,9 @@ async function runRoads() {
       $('c2_extra').textContent = data.extra_edges;
       $('c2_path1').textContent = '—';
       $('c2_path2').textContent = `${data.extra_edges} bridge edges`;
-      $('btn_crime').disabled = false;
+      $('btn_ambulance').disabled = false;
+      $('btn_clustering').disabled = false;
+      $('btn_risk_prediction').disabled = false;
       graphViewReady();
     } else {
       setStatus('dot_c2', 'text_c2', 'err', 'Error: ' + data.error);
@@ -618,7 +622,87 @@ function resetAmbulanceUI() {
   $('btn_ambulance').disabled    = true;
 }
 
+async function runClustering() {
+  setGlobal('running', 'Running K-means clustering…');
+  setStatus('dot_c5', 'text_c5', 'running', 'Clustering…');
+  $('btn_clustering').disabled = true;
+
+  try {
+    const k = parseInt($('crime_k').value) || 0;
+    const res = await fetch('/api/run_clustering', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ k }),
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      state.clustering = data;
+      // Update crime state for backward compatibility
+      state.crime = { ...state.crime, cluster_labels: data.cluster_labels };
+      
+      renderAll();
+      setStatus('dot_c5', 'text_c5', 'ok', 'Clustering complete ✓');
+      setGlobal('ok', 'K-means complete');
+      $('c5_clusters').textContent = data.k_used;
+      $('c5_samples').textContent = data.n_samples;
+      $('btn_toggle_clusters').disabled = false;
+      graphViewUpdate();
+    } else {
+      setStatus('dot_c5', 'text_c5', 'err', 'Error: ' + data.error);
+      setGlobal('err', 'Clustering failed');
+    }
+  } catch (e) {
+    setStatus('dot_c5', 'text_c5', 'err', 'Network error');
+    setGlobal('err', 'Request failed');
+  }
+
+  $('btn_clustering').disabled = false;
+}
+
+async function runRiskPrediction() {
+  setGlobal('running', 'Calculating risk levels…');
+  setStatus('dot_c5', 'text_c5', 'running', 'Predicting…');
+  $('btn_risk_prediction').disabled = true;
+
+  try {
+    const res = await fetch('/api/run_risk_prediction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+      state.risk = data;
+      // Update crime state for backward compatibility
+      state.crime = { ...state.crime, ...data };
+      
+      renderAll();
+      drawModelAnalysis(data.model_analysis);
+      setStatus('dot_c5', 'text_c5', 'ok', 'Risk calculated ✓');
+      setGlobal('ok', 'Risk prediction complete');
+      $('c5_high').textContent = data.high;
+      $('c5_medium').textContent = data.medium;
+      $('c5_low').textContent = data.low;
+      $('btn_police').disabled = false;
+      if (data.edges) {
+        state.roads.edges = data.edges;
+      }
+      graphViewUpdate();
+    } else {
+      setStatus('dot_c5', 'text_c5', 'err', 'Error: ' + data.error);
+      setGlobal('err', 'Risk prediction failed');
+    }
+  } catch (e) {
+    setStatus('dot_c5', 'text_c5', 'err', 'Network error');
+    setGlobal('err', 'Request failed');
+  }
+
+  $('btn_risk_prediction').disabled = false;
+}
+
 async function runCrime() {
+  // Legacy function - runs both clustering and risk prediction
   setGlobal('running', 'Predicting crime risk…');
   setStatus('dot_c5', 'text_c5', 'running', 'Running ML…');
   $('btn_crime').disabled = true;
@@ -629,21 +713,31 @@ async function runCrime() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ k }),
-    });    const data = await res.json();
+    });
+    const data = await res.json();
+    
     if (data.success) {
       state.crime = data;
+      state.clustering = { cluster_labels: data.cluster_labels };
+      state.risk = { 
+        risk_levels: data.risk_levels,
+        explanations: data.explanations,
+        high_count: data.high,
+        medium_count: data.medium,
+        low_count: data.low
+      };
+      
       renderAll();
       drawModelAnalysis(data.model_analysis);
       setStatus('dot_c5', 'text_c5', 'ok', 'Risk predicted ✓');
       setGlobal('ok', 'C5 complete');
-      $('c5_high').textContent   = data.high;
+      $('c5_high').textContent = data.high;
       $('c5_medium').textContent = data.medium;
-      $('c5_low').textContent    = data.low;
-      $('btn_ambulance').disabled = false;
+      $('c5_low').textContent = data.low;
       $('btn_toggle_clusters').disabled = false;
       $('btn_police').disabled = false;
       if (data.edges) {
-          state.roads.edges = data.edges;
+        state.roads.edges = data.edges;
       }
       graphViewUpdate();
     } else {
