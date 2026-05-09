@@ -12,7 +12,6 @@ from flask import Flask, render_template, request, jsonify
 from challenges.c1_layout import run_layout, LocationType
 from util.save_grid import save_grid, load_grid
 from challenges.c2_roads import run_roads
-from challenges.c5_crime import run_crime
 from challenges.c3_ambulance import run_ambulance
 from scipy import stats as scipy_stats
 
@@ -211,36 +210,6 @@ def api_run_risk_prediction():
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-@app.route("/api/run_crime", methods=["POST"])
-def api_run_crime():
-    # Legacy endpoint - runs both clustering and risk prediction
-    if state["city_graph"] is None:
-        return jsonify({"success": False, "error": "Run Roads first"}), 400
-    try:
-        data = request.json or {}
-        k = int(data.get("k", 0))
-        
-        # Run clustering
-        clustering_result = run_clustering(state["city_graph"], k=k)
-        state["clustering_result"] = clustering_result
-        
-        # Run risk prediction
-        risk_result = run_risk_prediction(state["city_graph"])
-        state["risk_result"] = risk_result
-        
-        return jsonify({
-            "success": True,
-            "high": risk_result["high_count"],
-            "medium": risk_result["medium_count"],
-            "low": risk_result["low_count"],
-            "cluster_labels": clustering_result["cluster_labels"],
-            "risk_levels": risk_result["risk_levels"],
-            "explanations": risk_result["explanations"],
-            "model_analysis": risk_result["model_analysis"],
-            "edges": graph_to_json(state["city_graph"], None, None)["edges"],
-        })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 400
 
 
 @app.route("/api/run_police", methods=["POST"])

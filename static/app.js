@@ -701,54 +701,6 @@ async function runRiskPrediction() {
   $('btn_risk_prediction').disabled = false;
 }
 
-async function runCrime() {
-  // Legacy function - runs both clustering and risk prediction
-  setGlobal('running', 'Predicting crime risk…');
-  setStatus('dot_c5', 'text_c5', 'running', 'Running ML…');
-  $('btn_crime').disabled = true;
-
-  try {
-    const k = parseInt($('crime_k').value) || 0;
-    const res = await fetch('/api/run_crime', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ k }),
-    });
-    const data = await res.json();
-    
-    if (data.success) {
-      state.crime = data;
-      state.clustering = { cluster_labels: data.cluster_labels };
-      state.risk = { 
-        risk_levels: data.risk_levels,
-        explanations: data.explanations,
-        high_count: data.high,
-        medium_count: data.medium,
-        low_count: data.low
-      };
-      
-      renderAll();
-      drawModelAnalysis(data.model_analysis);
-      setStatus('dot_c5', 'text_c5', 'ok', 'Risk predicted ✓');
-      setGlobal('ok', 'C5 complete');
-      $('c5_high').textContent = data.high;
-      $('c5_medium').textContent = data.medium;
-      $('c5_low').textContent = data.low;
-      $('btn_toggle_clusters').disabled = false;
-      $('btn_police').disabled = false;
-      if (data.edges) {
-        state.roads.edges = data.edges;
-      }
-      graphViewUpdate();
-    } else {
-      setStatus('dot_c5', 'text_c5', 'err', 'Error: ' + data.error);
-      setGlobal('err', 'C5 failed');
-    }
-  } catch (e) {
-    setStatus('dot_c5', 'text_c5', 'err', 'Network error');
-  }
-  $('btn_crime').disabled = false;
-}
 
 function drawModelAnalysis(analysis) {
   let panel = $('model_analysis_panel');
