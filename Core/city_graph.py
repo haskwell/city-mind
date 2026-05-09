@@ -27,9 +27,8 @@ class CityGraph:
 
     def update_effective_costs(self):
         for u, v, data in self._g.edges(data=True):
-            m_u = self._g.nodes[u].get("risk_index", 0.0) + 1.0
-            m_v = self._g.nodes[v].get("risk_index", 0.0) + 1.0
-            self._g[u][v]["effective_cost"] = data["base_cost"] * m_u * m_v
+            m = max(self._g.nodes[u].get("risk_index", 1.0), self._g.nodes[v].get("risk_index", 1.0))
+            self._g[u][v]["effective_cost"] = data["base_cost"] * m
 
     def number_of_nodes(self) -> int:
         return self._g.number_of_nodes()

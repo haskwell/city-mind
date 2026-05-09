@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CityMind — Urban Intelligence System</title>
+  <link rel="stylesheet" href="/static/graph_view.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
@@ -266,19 +268,37 @@
 
     </aside>
 
-    <!-- ═══════════════════ CANVAS AREA ═══════════════════ -->
     <main class="viewport">
+      <div class="view-tabs">
+        <button class="view-tab active" id="tab_grid" onclick="switchView('grid')">⬛ Grid View</button>
+        <button class="view-tab" id="tab_graph" onclick="switchView('graph')" disabled>◈ Graph View</button>
+      </div>
       <div class="canvas-container" id="canvas_container">
         <div class="canvas-placeholder" id="canvas_placeholder">
           <div class="placeholder-icon"></div>
           <p class="placeholder-text">Configure the grid and run CSP<br>to generate your city layout</p>
         </div>
         <canvas id="city_canvas"></canvas>
+        <div id="graph_container">
+          <div id="graph_placeholder">
+            <div class="ph-icon">◈</div>
+            <p>Run C2 to build the graph</p>
+          </div>
+          <div id="cy"></div>
+        </div>
       </div>
     </main>
 
   </div>
-
+  <div id="inspect_panel">
+    <div class="inspect-header">
+      <span class="inspect-title" id="inspect_title">Inspector</span>
+      <span class="inspect-type-badge" id="inspect_badge"></span>
+      <button class="inspect-close" onclick="closeInspectPanel()">✕</button>
+    </div>
+    <div class="inspect-body" id="inspect_body"></div>
+  </div>
   <script src="/static/app.js"></script>
+  <script src="/static/graph_view.js"></script>
 </body>
 </html>

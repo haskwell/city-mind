@@ -48,6 +48,8 @@ def graph_to_json(cg, path1, path2):
             "v": list(v),
             "blocked": data.get("blocked", False),
             "redundancy": data.get("redundancy", False),
+            "base_cost": data.get("base_cost", None),
+            "effective_cost": data.get("effective_cost", None),
         })
     mst_count = sum(1 for _, _, d in cg.edges(data=True) if not d.get("redundancy", False))
     extra_count = sum(1 for _, _, d in cg.edges(data=True) if d.get("redundancy", False))
@@ -181,6 +183,7 @@ def api_run_crime():
             "risk_levels":    risk_levels,
             "explanations":   explanations,
             "model_analysis": result["model_analysis"],
+            "edges":          graph_to_json(state["city_graph"], None, None)["edges"],
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400

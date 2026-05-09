@@ -497,8 +497,8 @@ async function runRoads() {
       $('c2_extra').textContent = data.extra_edges;
       $('c2_path1').textContent = '—';
       $('c2_path2').textContent = `${data.extra_edges} bridge edges`;
-
       $('btn_crime').disabled = false;
+      graphViewReady();
     } else {
       setStatus('dot_c2', 'text_c2', 'err', 'Error: ' + data.error);
       setGlobal('err', 'Roads failed');
@@ -587,6 +587,10 @@ async function runCrime() {
       $('c5_low').textContent    = data.low;
       $('btn_ambulance').disabled = false;
       $('btn_toggle_clusters').disabled = false;
+      if (data.edges) {
+          state.roads.edges = data.edges;
+      }
+      graphViewUpdate();
     } else {
       setStatus('dot_c5', 'text_c5', 'err', 'Error: ' + data.error);
       setGlobal('err', 'C5 failed');
