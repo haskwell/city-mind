@@ -8,6 +8,7 @@ const state = {
   roads:      null,   // { edges[], path1, path2, ... }
   ambulance:  null,   // { placements[], ... }
   crime:      null,
+  showClusters: true,
 };
 
 // ── Canvas config ──────────────────────────────────
@@ -108,6 +109,12 @@ function adjustCount(type, delta) {
   adjustValue('count_' + type, delta, 0, 200);
 }
 
+function toggleClusters() {
+  state.showClusters = !state.showClusters;
+  $('btn_toggle_clusters').textContent = state.showClusters ? '◉ Hide Clusters' : '◎ Show Clusters';
+  renderAll();
+}
+
 // ── Canvas Render ──────────────────────────────────
 function getCanvas() { return $('city_canvas'); }
 
@@ -130,7 +137,7 @@ function renderAll() {
   ctx.fillRect(0, 0, canvasSize, canvasSize);
 
   drawGrid(ctx, size);
-  if (state.crime)     drawClusterOutlines(ctx);  // ← right after grid
+  if (state.crime && state.showClusters)     drawClusterOutlines(ctx);  // ← right after grid
   if (state.roads)     drawRoads(ctx);
   if (state.ambulance) drawAmbulances(ctx);
   if (state.roads)     redrawLabels(ctx, size);
@@ -579,6 +586,7 @@ async function runCrime() {
       $('c5_medium').textContent = data.medium;
       $('c5_low').textContent    = data.low;
       $('btn_ambulance').disabled = false;
+      $('btn_toggle_clusters').disabled = false;
     } else {
       setStatus('dot_c5', 'text_c5', 'err', 'Error: ' + data.error);
       setGlobal('err', 'C5 failed');
