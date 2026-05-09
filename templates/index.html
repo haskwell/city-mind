@@ -266,6 +266,68 @@
         </div>
       </section>
 
+      <!-- ── Challenge 4 ── -->
+      <section class="panel" id="panel_c4">
+        <div class="panel-header">
+          <div class="panel-badge badge-c4">C4</div>
+          <div class="panel-title-group">
+            <h2 class="panel-title">Emergency Routing</h2>
+            <span class="algo-chip">A*</span>
+          </div>
+        </div>
+
+        <div class="c4-notice mono-sm">
+          Switch to <strong>Graph View</strong> and click nodes to select civilians
+        </div>
+
+        <div class="field-row">
+          <label class="field-label">Selected Civilians</label>
+          <div class="stepper stepper-sm">
+            <span class="stepper-input mono" id="c4_civilian_count" style="display:flex;align-items:center;justify-content:center">0</span>
+          </div>
+        </div>
+
+        <button class="btn btn-ghost" id="btn_clear_civilians" onclick="clearCivilians()" disabled>
+          ✕ Clear Civilians
+        </button>
+
+        <div class="btn-pair">
+          <button class="btn btn-c4" id="btn_start_routing" onclick="startRouting()" disabled>
+            <span class="btn-icon">▶</span> Start Routing
+          </button>
+          <button class="btn btn-ghost" id="btn_stop_routing" onclick="stopRouting()" disabled>
+            ■ Stop
+          </button>
+        </div>
+
+        <div class="status-line" id="status_c4">
+          <span class="dot dot-idle" id="dot_c4"></span>
+          <span id="text_c4" class="mono-sm">Run C3 first</span>
+        </div>
+
+        <div class="stats-block" id="stats_c4">
+          <div class="stat-row">
+            <span class="stat-label">Current Target</span>
+            <span class="stat-value mono" id="c4_target">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Step</span>
+            <span class="stat-value mono" id="c4_step">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Rescued</span>
+            <span class="stat-value mono" id="c4_rescued">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Stranded</span>
+            <span class="stat-value mono" id="c4_stranded">—</span>
+          </div>
+        </div>
+
+        <div class="c4-log-label mono-sm">Event Log</div>
+        <div class="c4-event-log" id="c4_event_log"></div>
+      </section>
+
       <!-- ── Legend ── -->
       <section class="panel panel-legend">
         <h3 class="legend-title">Legend</h3>

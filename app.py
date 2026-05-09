@@ -13,6 +13,7 @@ from challenges.c1_layout import run_layout, LocationType
 from util.save_grid import save_grid, load_grid
 from challenges.c2_roads import run_roads
 from challenges.c3_ambulance import run_ambulance
+from challenges.c4_routing import init_routing, step_routing
 from scipy import stats as scipy_stats
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -25,6 +26,7 @@ state = {
     "path2": None,
     "ambulance_result": None,
     "police_result": None,
+    "routing_sim": None,
     "clustering_result": None,
     "risk_result": None,
 }
@@ -167,7 +169,8 @@ def api_run_ambulance():
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
-    
+
+
 @app.route("/api/run_clustering", methods=["POST"])
 def api_run_clustering():
     if state["city_graph"] is None:
@@ -210,8 +213,6 @@ def api_run_risk_prediction():
         return jsonify({"success": False, "error": str(e)}), 400
 
 
-
-
 @app.route("/api/run_police", methods=["POST"])
 def api_run_police():
     if state["city_graph"] is None:
@@ -225,6 +226,57 @@ def api_run_police():
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
+
+
+@app.route("/api/routing/start", methods=["POST"])
+def api_routing_start():
+    if state["city_graph"] is None:
+        return jsonify({"success": False, "error": "Run Roads first (C2)"}), 400
+    data = request.json or {}
+    civilians_raw = data.get("civilians", [])
+    try:
+        civilians = [tuple(c) for c in civilians_raw]
+        sim = init_routing(state["city_graph"], civilians)
+        state["routing_sim"] = sim
+        return jsonify({
+            "success": True,
+            "current_pos": list(sim["current_pos"]),
+            "current_path": [list(n) for n in sim["current_path"]],
+            "current_target": list(sim["current_target"]) if sim["current_target"] else None,
+            "depot": list(sim["depot"]),
+            "done": sim["done"],
+            "rescued_count": 0,
+            "unreachable_count": 0,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@app.route("/api/routing/step", methods=["POST"])
+def api_routing_step():
+    if state["routing_sim"] is None:
+        return jsonify({"success": False, "error": "Call /api/routing/start first"}), 400
+    if state["routing_sim"]["done"]:
+        return jsonify({"success": False, "error": "Simulation already done"}), 400
+    try:
+        event = step_routing(state["city_graph"], state["routing_sim"])
+        return jsonify({"success": True, **event})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@app.route("/api/routing/block_road", methods=["POST"])
+def api_routing_block_road():
+    if state["city_graph"] is None:
+        return jsonify({"success": False, "error": "No city graph available"}), 400
+    data = request.json or {}
+    u = data.get("u")
+    v = data.get("v")
+    if u is None or v is None:
+        return jsonify({"success": False, "error": "Must supply u and v"}), 400
+    state["city_graph"].block_road(tuple(u), tuple(v))
+    return jsonify({"success": True})
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

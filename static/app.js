@@ -2,6 +2,8 @@
    CityMind — Frontend Logic
    ═══════════════════════════════════════════════════ */
 
+const STEP_DELAY_MS = 800;   // milliseconds between simulation steps
+
 // ── App State ──────────────────────────────────────
 const state = {
   grid:       null,   // { size, cells[] }
@@ -12,6 +14,8 @@ const state = {
   risk:       null,   // { risk_levels, explanations, ... }
   showClusters: true,
   police:     null,   // { placements[], ... }
+  routingInterval: null,  // setInterval handle
+  routingRunning:  false,
 };
 
 // ── Canvas config ──────────────────────────────────
@@ -442,6 +446,7 @@ async function runCSP() {
       state.grid      = data.grid;
       state.roads     = null;
       state.ambulance = null;
+      stopRouting();
 
       renderAll();
       resetRoadsUI();
@@ -519,6 +524,7 @@ async function runRoads() {
     if (data.success) {
       state.roads     = data;
       state.ambulance = null;
+      stopRouting();
 
       renderAll();
       resetAmbulanceUI();
@@ -567,6 +573,11 @@ async function runAmbulance() {
       $('c3_placements').textContent = data.placements.length;
       $('c3_worst').textContent      = data.worst_case_distance != null ? data.worst_case_distance : '∞';
       $('c3_coverage').textContent   = `${data.covered} / ${data.total_citizens}`;
+
+      // Enable C4 routing
+      setStatus('dot_c4', 'text_c4', 'ok', 'Select civilians in Graph View');
+      enableCivilianSelection();
+      updateCivilianCount();
     } else {
       setStatus('dot_c3', 'text_c3', 'err', 'Error: ' + data.error);
       setGlobal('err', 'GA failed');
@@ -602,6 +613,181 @@ async function runPolice() {
   }
 
   $('btn_police').disabled = false;
+}
+
+// ── C4: Emergency Routing ──────────────────────────
+
+async function startRouting() {
+  // Auto-switch to graph view if needed
+  if (currentView !== 'graph') {
+    switchView('graph');
+  }
+
+  const civilians = getCivilianList();   // from graph_view.js
+  if (civilians.length === 0) {
+    setStatus('dot_c4', 'text_c4', 'warn', 'Select at least 1 civilian');
+    return;
+  }
+
+  setStatus('dot_c4', 'text_c4', 'running', 'Starting…');
+  $('btn_start_routing').disabled = true;
+  $('btn_stop_routing').disabled  = false;
+  disableCivilianSelection();
+
+  try {
+    const res = await fetch('/api/routing/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ civilians }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      setStatus('dot_c4', 'text_c4', 'err', data.error);
+      $('btn_start_routing').disabled = false;
+      $('btn_stop_routing').disabled  = true;
+      return;
+    }
+
+    // Clear event log
+    $('c4_event_log').innerHTML = '';
+
+    // Place medic at depot
+    const [dr, dc] = data.depot;
+    addMedicMarker(dr, dc);
+
+    // Highlight initial path
+    highlightPath(data.current_path);
+
+    // Update stats
+    $('c4_step').textContent    = 0;
+    $('c4_rescued').textContent = 0;
+    $('c4_stranded').textContent = 0;
+    $('c4_target').textContent  = data.current_target ? `(${data.current_target[0]},${data.current_target[1]})` : '—';
+
+    state.routingRunning = true;
+
+    if (data.done) {
+      _onRoutingDone({ rescued_count: 0, unreachable_count: 0, rescued: [], unreachable: [] });
+      return;
+    }
+
+    state.routingInterval = setInterval(stepRouting, STEP_DELAY_MS);
+    setStatus('dot_c4', 'text_c4', 'running', 'Routing…');
+  } catch (e) {
+    setStatus('dot_c4', 'text_c4', 'err', 'Network error');
+    $('btn_start_routing').disabled = false;
+    $('btn_stop_routing').disabled  = true;
+  }
+}
+
+async function stepRouting() {
+  try {
+    const res = await fetch('/api/routing/step', { method: 'POST' });
+    const data = await res.json();
+    if (!data.success) {
+      clearInterval(state.routingInterval);
+      setStatus('dot_c4', 'text_c4', 'err', data.error);
+      return;
+    }
+
+    // Move medic
+    const [row, col] = data.current_pos;
+    moveMedicMarker(row, col);
+
+    // Update path highlight
+    highlightPath(data.current_path);
+
+    // Update stats
+    $('c4_step').textContent     = data.step;
+    $('c4_rescued').textContent  = data.rescued_count;
+    $('c4_stranded').textContent = data.unreachable_count;
+    $('c4_target').textContent   = data.current_target ? `(${data.current_target[0]},${data.current_target[1]})` : '—';
+
+    // Append event log entry
+    _logEvent(data);
+
+    // Visual feedback on rescue / unreachable
+    if (data.type === 'rescue' || data.type === 'done') {
+      for (const rescued of (data.rescued || [])) {
+        const nodeId = `${rescued[0]}_${rescued[1]}`;
+        if (cy) {
+          const node = cy.$(`#${nodeId}`);
+          node.removeClass('civilian');
+          node.flashClass('rescued-flash', 600);
+        }
+      }
+    }
+    if (data.type === 'unreachable') {
+      for (const stuck of (data.unreachable || [])) {
+        const nodeId = `${stuck[0]}_${stuck[1]}`;
+        if (cy) cy.$(`#${nodeId}`).addClass('stranded');
+      }
+    }
+
+    if (data.done) {
+      clearInterval(state.routingInterval);
+      state.routingRunning = false;
+      _onRoutingDone(data);
+    }
+  } catch (e) {
+    clearInterval(state.routingInterval);
+    setStatus('dot_c4', 'text_c4', 'err', 'Network error');
+  }
+}
+
+function stopRouting() {
+  if (state.routingInterval) {
+    clearInterval(state.routingInterval);
+    state.routingInterval = null;
+  }
+  state.routingRunning = false;
+  removeMedicMarker();
+  clearPathHighlight();
+  // Re-enable start if ambulance exists and civilians selected
+  const startBtn = $('btn_start_routing');
+  if (startBtn) startBtn.disabled = !state.ambulance;
+  const stopBtn = $('btn_stop_routing');
+  if (stopBtn) stopBtn.disabled = true;
+  enableCivilianSelection();
+}
+
+function _logEvent(data) {
+  const log = $('c4_event_log');
+  if (!log) return;
+  const icons = { move: '→', replan: '⚡', rescue: '✓', unreachable: '✗', done: '■' };
+  const colors = { move: '#5a6680', replan: '#f59e0b', rescue: '#22c55e', unreachable: '#ef4444', done: '#e8edf7' };
+  const icon  = icons[data.type]  || '·';
+  const color = colors[data.type] || '#5a6680';
+  const line  = document.createElement('div');
+  line.style.cssText = `color:${color};padding:2px 0;font-size:11px;`;
+  line.innerHTML = `<span style="opacity:0.4">[${data.step}]</span> ${icon} ${data.message}`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function _onRoutingDone(data) {
+  setStatus('dot_c4', 'text_c4', 'ok', `Done — ${data.rescued_count} rescued`);
+  $('btn_start_routing').disabled = false;
+  $('btn_stop_routing').disabled  = true;
+  removeMedicMarker();
+  clearPathHighlight();
+
+  const log = $('c4_event_log');
+  if (!log) return;
+  const sep = document.createElement('div');
+  sep.style.cssText = 'border-top:1px solid #2a3347;margin:6px 0;';
+  log.appendChild(sep);
+  const summary = document.createElement('div');
+  summary.style.cssText = 'color:#e8edf7;font-size:11px;line-height:1.8;';
+  const strandedList = (data.unreachable || []).map(n => `(${n[0]},${n[1]})`).join(', ') || 'none';
+  summary.innerHTML = `
+    <b>Final Report</b><br>
+    Rescued: <span style="color:#22c55e">${data.rescued_count}</span><br>
+    Stranded: <span style="color:#ef4444">${data.unreachable_count}</span><br>
+    ${data.unreachable_count > 0 ? `<span style="color:#5a6680">Stranded at: ${strandedList}</span>` : ''}
+  `;
+  log.appendChild(summary);
+  log.scrollTop = log.scrollHeight;
 }
 
 // ── UI Resets ──────────────────────────────────────

@@ -21,6 +21,11 @@ const NODE_SIZE    = 54;
 let cy = null;
 let currentView = 'grid';
 
+// C4 routing state
+let selectedCivilians = new Set();   // "r_c" string keys
+let selectingCivilians = false;      // true when C4 is ready for selection
+let currentPathEdgeIds = [];         // edge ids currently highlighted as active path
+
 function switchView(view) {
   currentView = view;
 
@@ -136,7 +141,21 @@ function buildGraph() {
   cy.fit(cy.elements(), 48);
 
   cy.on('tap', 'node', function(evt) {
-    showNodeInspect(evt.target.data());
+    const data = evt.target.data();
+    // C4 civilian selection
+    if (selectingCivilians && data.type !== 'AMBULANCE_DEPOT' && data.type !== 'EMPTY') {
+      const key = `${data.row}_${data.col}`;
+      if (selectedCivilians.has(key)) {
+        selectedCivilians.delete(key);
+        evt.target.removeClass('civilian');
+      } else {
+        selectedCivilians.add(key);
+        evt.target.addClass('civilian');
+      }
+      updateCivilianCount();
+      return;
+    }
+    showNodeInspect(data);
   });
 
   cy.on('tap', 'edge', function(evt) {
@@ -233,6 +252,43 @@ function buildCyStyle() {
         'overlay-color':  '#f59e0b',
         'overlay-opacity': 0.15,
         'overlay-padding': 4,
+      },
+    },
+    // C4: civilian selection style
+    {
+      selector: 'node.civilian',
+      style: {
+        'border-color': '#f59e0b',
+        'border-width':  5,
+        'width':         NODE_SIZE * 1.15,
+        'height':        NODE_SIZE * 1.15,
+      },
+    },
+    // C4: medic marker
+    {
+      selector: 'node[type="MEDIC"]',
+      style: {
+        'background-color': '#ffffff',
+        'color':             '#000000',
+        'font-size':         20,
+        'font-weight':       700,
+        'width':             NODE_SIZE * 1.1,
+        'height':            NODE_SIZE * 1.1,
+        'shape':             'ellipse',
+        'border-color':      '#fde047',
+        'border-width':       4,
+        'z-index':            999,
+        'text-outline-width': 0,
+      },
+    },
+    // C4: active path highlighting
+    {
+      selector: 'edge.active-path',
+      style: {
+        'line-color': '#fde047',
+        'width':       4,
+        'opacity':     1,
+        'z-index':     100,
       },
     },
   ];
@@ -358,6 +414,18 @@ function showEdgeInspect(data) {
     row('Blocked',   data.blocked ? valClass('Yes — impassable', 'blocked') : valClass('No', 'ok')),
   ]);
 
+  // C4: Block Road button
+  const alreadyBlocked = data.blocked;
+  html += `<div class="inspect-section">
+    <button
+      class="btn btn-ghost"
+      style="width:100%;margin-top:4px;${alreadyBlocked ? 'opacity:0.4;cursor:not-allowed' : ''}"
+      onclick="${alreadyBlocked ? '' : `blockRoad('${data.source}','${data.target}')`}"
+      ${alreadyBlocked ? 'disabled' : ''}>
+      🚧 ${alreadyBlocked ? 'Already Blocked' : 'Block Road'}
+    </button>
+  </div>`;
+
   body.innerHTML = html;
   panel.classList.add('open');
 }
@@ -388,3 +456,140 @@ function closeInspectPanel() {
   document.getElementById('inspect_panel').classList.remove('open');
   if (cy) cy.$(':selected').unselect();
 }
+// ── C4: Civilian helpers ───────────────────────────────────────────────────
+
+function enableCivilianSelection() {
+  selectingCivilians = true;
+}
+
+function disableCivilianSelection() {
+  selectingCivilians = false;
+}
+
+function updateCivilianCount() {
+  const el = document.getElementById('c4_civilian_count');
+  if (el) el.textContent = selectedCivilians.size;
+  const clearBtn = document.getElementById('btn_clear_civilians');
+  if (clearBtn) clearBtn.disabled = selectedCivilians.size === 0;
+  const startBtn = document.getElementById('btn_start_routing');
+  if (startBtn) startBtn.disabled = !(state.ambulance && selectedCivilians.size > 0);
+}
+
+function clearCivilians() {
+  if (cy) {
+    cy.nodes('.civilian').removeClass('civilian');
+  }
+  selectedCivilians.clear();
+  updateCivilianCount();
+}
+
+function getCivilianList() {
+  // Returns array of [row, col] from the "r_c" keys
+  return Array.from(selectedCivilians).map(key => {
+    const [r, c] = key.split('_').map(Number);
+    return [r, c];
+  });
+}
+
+// ── C4: Block road ─────────────────────────────────────────────────────────
+
+async function blockRoad(srcId, tgtId) {
+  const [ur, uc] = srcId.split('_').map(Number);
+  const [vr, vc] = tgtId.split('_').map(Number);
+
+  try {
+    const res = await fetch('/api/routing/block_road', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ u: [ur, uc], v: [vr, vc] }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      // Update Cytoscape edge data immediately
+      const edgeId = `e_${srcId}_${tgtId}`;
+      const altEdgeId = `e_${tgtId}_${srcId}`;
+      const edge = cy.$(`#${edgeId}`).length ? cy.$(`#${edgeId}`) : cy.$(`#${altEdgeId}`);
+      if (edge.length) {
+        edge.data('blocked', true);
+      }
+      // Update state.roads.edges for consistency
+      if (state.roads && state.roads.edges) {
+        for (const e of state.roads.edges) {
+          if ((e.u[0] === ur && e.u[1] === uc && e.v[0] === vr && e.v[1] === vc) ||
+              (e.u[0] === vr && e.u[1] === vc && e.v[0] === ur && e.v[1] === uc)) {
+            e.blocked = true;
+          }
+        }
+      }
+      closeInspectPanel();
+    }
+  } catch (err) {
+    console.error('blockRoad failed', err);
+  }
+}
+
+// ── C4: Medic marker ───────────────────────────────────────────────────────
+
+function addMedicMarker(row, col) {
+  if (!cy) return;
+  removeMedicMarker();
+  cy.add({
+    group: 'nodes',
+    data: { id: 'medic', type: 'MEDIC', label: '✚' },
+    position: { x: col * NODE_SPACING, y: row * NODE_SPACING },
+  });
+}
+
+function moveMedicMarker(row, col) {
+  if (!cy) return;
+  const medic = cy.$('#medic');
+  if (medic.length) {
+    medic.position({ x: col * NODE_SPACING, y: row * NODE_SPACING });
+  }
+}
+
+function removeMedicMarker() {
+  if (!cy) return;
+  cy.$('#medic').remove();
+}
+
+// ── C4: Path highlighting ──────────────────────────────────────────────────
+
+function highlightPath(pathNodes) {
+  if (!cy) return;
+  // Clear old
+  for (const eid of currentPathEdgeIds) {
+    cy.$(`#${eid}`).removeClass('active-path');
+  }
+  currentPathEdgeIds = [];
+
+  if (!pathNodes || pathNodes.length < 2) return;
+
+  for (let i = 0; i < pathNodes.length - 1; i++) {
+    const [ar, ac] = pathNodes[i];
+    const [br, bc] = pathNodes[i + 1];
+    const srcId = `${ar}_${ac}`;
+    const tgtId = `${br}_${bc}`;
+    const edgeId  = `e_${srcId}_${tgtId}`;
+    const edgeId2 = `e_${tgtId}_${srcId}`;
+    const edge = cy.$(`#${edgeId}`).length ? cy.$(`#${edgeId}`) : cy.$(`#${edgeId2}`);
+    if (edge.length) {
+      edge.addClass('active-path');
+      currentPathEdgeIds.push(edge.id());
+    }
+  }
+}
+
+function clearPathHighlight() {
+  for (const eid of currentPathEdgeIds) {
+    if (cy) cy.$(`#${eid}`).removeClass('active-path');
+  }
+  currentPathEdgeIds = [];
+}
+
+// ── C4: Extend buildCyStyle with civilian, medic, active-path styles ───────
+// Called automatically by buildGraph() via a monkey-patch approach:
+// We override the style array after the fact.
+
+const _origBuildCyStyle = buildCyStyle;
+// (We extend at the bottom of the file, after buildCyStyle is defined)
