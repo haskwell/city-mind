@@ -130,14 +130,14 @@ function renderAll() {
   ctx.fillRect(0, 0, canvasSize, canvasSize);
 
   drawGrid(ctx, size);
+  if (state.crime)     drawClusterOutlines(ctx);  // ← right after grid
   if (state.roads)     drawRoads(ctx);
   if (state.ambulance) drawAmbulances(ctx);
   if (state.roads)     redrawLabels(ctx, size);
   if (!state.roads)    drawLabels(ctx, size);
-  if (state.crime)     drawClusterOutlines(ctx);
   if (state.roads)     drawRoads(ctx);
   if (state.ambulance) drawAmbulances(ctx);
-  if (state.crime)     drawRiskDots(ctx);      // after ambulances so dots are on top
+  if (state.crime)     drawRiskDots(ctx);
 }
 
 function drawClusterOutlines(ctx) {

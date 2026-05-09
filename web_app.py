@@ -6,7 +6,8 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from flask import Flask, render_template, request, jsonify
-from challenges.c1_layout import run_layout, save_grid, load_grid, LocationType
+from challenges.c1_layout import run_layout, LocationType
+from util.save_grid import save_grid, load_grid
 from challenges.c2_roads import run_roads
 from challenges.c5_crime import run_crime
 from challenges.c3_ambulance import run_ambulance
@@ -168,9 +169,9 @@ def api_run_crime():
         data = request.json or {}
         k = int(data.get("k", 0))
         result = run_crime(state["city_graph"], k=k)
-        cluster_labels = {str(list(key)): v for key, v in result["cluster_labels"].items()}
-        risk_levels    = {str(list(key)): v for key, v in result["risk_levels"].items()}
-        explanations = {str(list(k)): v for k, v in result["explanations"].items()}
+        cluster_labels = result["cluster_labels"]
+        risk_levels    = result["risk_levels"]
+        explanations   = result["explanations"]
         return jsonify({
             "success":        True,
             "high":           result["high_count"],
