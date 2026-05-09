@@ -47,6 +47,7 @@ function switchView(view) {
     graphCont.style.display = 'block';
     tabGrid.classList.remove('active');
     tabGraph.classList.add('active');
+    document.getElementById('graph_placeholder').style.display = state.roads ? 'none' : 'block';
     if (cy) cy.resize();
   }
 
@@ -145,6 +146,8 @@ function buildGraph() {
   cy.on('tap', function(evt) {
     if (evt.target === cy) closeInspectPanel();
   });
+  document.getElementById('graph_placeholder').style.display = 'none';
+
 }
 
 function buildCyStyle() {

@@ -201,6 +201,13 @@
         <button class="btn btn-ghost" id="btn_toggle_clusters" onclick="toggleClusters()" disabled>
           ◉ Hide Clusters
         </button>
+        <button class="btn btn-ghost" id="btn_police" onclick="runPolice()" disabled>
+          👮 Deploy Officers
+        </button>
+        <div class="stat-row">
+          <span class="stat-label">Officers</span>
+          <span class="stat-value mono" id="c6_count">—</span>
+        </div>
         <div class="status-line" id="status_c5">
           <span class="dot dot-idle" id="dot_c5"></span>
           <span id="text_c5" class="mono-sm">Run C2 first</span>

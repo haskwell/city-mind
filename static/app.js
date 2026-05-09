@@ -9,6 +9,7 @@ const state = {
   ambulance:  null,   // { placements[], ... }
   crime:      null,
   showClusters: true,
+  police:     null,   // { placements[], ... }
 };
 
 // ── Canvas config ──────────────────────────────────
@@ -119,6 +120,7 @@ function toggleClusters() {
 function getCanvas() { return $('city_canvas'); }
 
 function renderAll() {
+  if (currentView === 'graph') return;
   const canvas = getCanvas();
   if (!state.grid) { canvas.style.display = 'none'; return; }
 
@@ -144,6 +146,7 @@ function renderAll() {
   if (!state.roads)    drawLabels(ctx, size);
   if (state.roads)     drawRoads(ctx);
   if (state.ambulance) drawAmbulances(ctx);
+  if (state.police)    drawPolice(ctx);
   if (state.crime)     drawRiskDots(ctx);
 }
 
@@ -367,6 +370,34 @@ function drawAmbulances(ctx) {
   }
 }
 
+function drawPolice(ctx) {
+  const r = Math.round(CELL * 0.18);
+  for (const [row, col] of state.police.placements) {
+    const [cx, cy] = cellCentre(row, col);
+
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth   = 2;
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur  = 14;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle   = '#facc15';
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur  = 10;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+
+    ctx.font         = `${Math.round(r * 1.1)}px serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👮', cx, cy);
+  }
+}
+
 // ── Utilities ──────────────────────────────────────
 function edgeKey(a, b) {
   const [ar, ac] = a, [br, bc] = b;
@@ -546,6 +577,29 @@ async function runAmbulance() {
   $('btn_csp').disabled       = false;
 }
 
+async function runPolice() {
+  setGlobal('running', 'Deploying officers…');
+  $('btn_police').disabled = true;
+
+  try {
+    const res  = await fetch('/api/run_police', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.success) {
+      state.police = data;
+      renderAll();
+      setGlobal('ok', 'Officers deployed');
+      $('c6_count').textContent = data.placements.length;
+    } else {
+      setGlobal('err', 'Police placement failed');
+    }
+  } catch (e) {
+    setGlobal('err', 'Network error');
+  }
+
+  $('btn_police').disabled = false;
+}
+
 // ── UI Resets ──────────────────────────────────────
 function resetRoadsUI() {
   setStatus('dot_c2', 'text_c2', 'idle', 'Ready');
@@ -587,6 +641,7 @@ async function runCrime() {
       $('c5_low').textContent    = data.low;
       $('btn_ambulance').disabled = false;
       $('btn_toggle_clusters').disabled = false;
+      $('btn_police').disabled = false;
       if (data.edges) {
           state.roads.edges = data.edges;
       }

@@ -3,6 +3,8 @@ import math
 import os
 import sys
 
+from challenges.c5_police import run_police
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 from flask import Flask, render_template, request, jsonify
@@ -22,6 +24,7 @@ state = {
     "path1": None,
     "path2": None,
     "ambulance_result": None,
+    "police_result": None,
 }
 
 
@@ -188,6 +191,20 @@ def api_run_crime():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 
+
+@app.route("/api/run_police", methods=["POST"])
+def api_run_police():
+    if state["city_graph"] is None:
+        return jsonify({"success": False, "error": "Run Roads first"}), 400
+    try:
+        result = run_police(state["city_graph"])
+        state["police_result"] = result
+        return jsonify({
+            "success": True,
+            "placements": [list(p) for p in result["placements"]],
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

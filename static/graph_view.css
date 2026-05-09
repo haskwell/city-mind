@@ -248,3 +248,22 @@
   border-radius: 2px;
   flex-shrink: 0;
 }
+
+.viewport {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 52px);
+}
+
+.canvas-container {
+  flex: 1;
+  min-height: 0;
+}
+
+#graph_container {
+  height: 100%;
+}
+
+#cy {
+  height: 100%;
+}
