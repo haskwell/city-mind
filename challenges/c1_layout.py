@@ -1,164 +1,10 @@
-from enum import Enum
 from collections import deque
 import random
-
+from core.city_grid import Grid, LocationType
 from scipy import stats
-import json
 
-def save_grid(grid, filepath="saved_grid.json"):
-    data = []
-    for r in range(grid.size):
-        for c in range(grid.size):
-            cell = grid.get_cell(r, c)
-            data.append({
-                "row": r,
-                "col": c,
-                "location_type": cell.location_type.value if cell.location_type else None,
-                "population_density": cell.population_density,
-                "risk_index": cell.risk_index,
-                "accessible": cell.accessible
-            })
-    with open(filepath, "w") as f:
-        json.dump({"size": grid.size, "cells": data}, f, indent=2)
-    print(f"[C1] Grid saved to {filepath}")
-
-def load_grid(filepath="saved_grid.json"):
-    with open(filepath, "r") as f:
-        data = json.load(f)
-    
-    grid = Grid(data["size"])
-    type_map = {lt.value: lt for lt in LocationType}
-    
-    for cell_data in data["cells"]:
-        cell = grid.get_cell(cell_data["row"], cell_data["col"])
-        cell.location_type = type_map.get(cell_data["location_type"])
-        cell.population_density = cell_data["population_density"]
-        cell.risk_index = cell_data["risk_index"]
-        cell.accessible = cell_data["accessible"]
-    
-    print(f"[C1] Grid loaded from {filepath}")
-    return grid
-
-# Location types
-class LocationType(Enum):
-    EMPTY       = "EMPTY"
-    RESIDENTIAL = "RESIDENTIAL"
-    HOSPITAL    = "HOSPITAL"
-    PRIMARY_HOSPITAL = "PRIMARY_HOSPITAL"
-    SCHOOL      = "SCHOOL"
-    INDUSTRIAL  = "INDUSTRIAL"
-    POWER_PLANT = "POWER_PLANT"
-    AMBULANCE_DEPOT = "AMBULANCE_DEPOT"
-
-# Grid cell
-class Cell:
-    def __init__(self, row, col):
-        self.row = row
-        self.col = col
-        self.location_type = None          # assigned by CSP
-        self.population_density = 0.0      # set after assignment
-        self.risk_index = 0.0              # set after assignment
-        self.accessible = True
-
-    def is_assigned(self):
-        return self.location_type is not None
-
-    def __repr__(self):
-        lt = self.location_type.value if self.location_type else "?"
-        return f"Cell({self.row},{self.col},{lt})"
-
-# Grid
-class Grid:
-    def __init__(self, size):
-        self.size = size
-        self.cells = [[Cell(r, c) for c in range(size)] for r in range(size)]
-
-    def get_cell(self, row, col):
-        if 0 <= row < self.size and 0 <= col < self.size:
-            return self.cells[row][col]
-        return None
-
-    def get_neighbors(self, row, col):
-        neighbors = [
-            self.get_cell(row - 1, col),  # up
-            self.get_cell(row + 1, col),  # down
-            self.get_cell(row, col - 1),  # left
-            self.get_cell(row, col + 1),  # right
-        ]
-
-        return [n for n in neighbors if n is not None]
-
-    def get_cells_within_hops(self, row, col, hops):
-        start = self.get_cell(row, col)
-
-        if start is None:
-            return []
-
-        visited = set()
-        queue = deque()
-        result = []
-
-        # (cell, distance)
-        queue.append((start, 0))
-        visited.add((start.row, start.col))
-
-        while queue:
-            current, distance = queue.popleft()
-
-            result.append(current)
-
-            # stop expanding beyond hop limit
-            if distance >= hops:
-                continue
-
-            for neighbor in self.get_neighbors(current.row, current.col):
-
-                pos = (neighbor.row, neighbor.col)
-
-                if pos not in visited:
-                    visited.add(pos)
-                    queue.append((neighbor, distance + 1))
-
-        return result
-
-    def unassigned_cells(self):
-        for row in self.cells:
-            for cell in row:
-                if not cell.is_assigned():
-                    yield cell
-
-    def assigned_cells(self):
-        for row in self.cells:
-            for cell in row:
-                if cell.is_assigned():
-                    yield cell
-
-    def cells_of_type(self, location_type):
-        for cell in self.assigned_cells():
-            if cell.location_type == location_type:
-                yield cell
-
-    def display(self):
-
-        symbols = {
-            LocationType.EMPTY: ".",
-            LocationType.RESIDENTIAL: "R",
-            LocationType.HOSPITAL: "H",
-            LocationType.SCHOOL: "S",
-            LocationType.INDUSTRIAL: "I",
-            LocationType.POWER_PLANT: "P",
-            LocationType.AMBULANCE_DEPOT: "A"
-        }
-
-        for row in self.cells:
-            print(" ".join(
-                symbols.get(cell.location_type, "?")
-                for cell in row
-            ))
-
-    def __repr__(self):
-        return f"Grid(size={self.size})"
-
+MAX_STEPS_PER_ATTEMPT = 500_000
+MAX_ATTEMPTS = 20
 
 # Constraint definitions
 def constraint_industrial_not_adjacent_to_hospital_or_school(grid, cell):
@@ -306,75 +152,56 @@ def get_domain(cell, remaining_counts):
         return []
     return [lt for lt, count in remaining_counts.items() if count > 0]
 
-def select_unassigned_variable(grid, domains):
-
-    best_cell = None
-    min_size = float('inf')
-
-    for cell in grid.unassigned_cells():
-
-        domain_size = len(domains.get(cell, []))
-
-        if domain_size < min_size:
-            min_size = domain_size
-            best_cell = cell
-
-    return best_cell
+def select_unassigned_variable(grid, domains, unassigned):
+    return min(unassigned, key=lambda c: len(domains.get(c, [])))
 
 def order_domain_values(cell, domain, grid, domains):
     random.shuffle(domain)
-    def count_eliminations(value):
-        eliminations = 0
-        cell.location_type = value
-        try:
-            affected: set = set()
-            for nearby in grid.get_cells_within_hops(cell.row, cell.col, 3):
-                if nearby is not cell:
-                    affected.add(nearby)
+    return domain
 
-            for affected_cell in affected:
-                if affected_cell.is_assigned():
-                    continue
-                for candidate_value in domains.get(affected_cell, []):
-                    try:
-                        affected_cell.location_type = candidate_value
-                        if not check_all_constraints(grid, affected_cell, domains):
-                            eliminations += 1
-                    finally:
-                        affected_cell.location_type = None   # always undo
-        finally:
-            cell.location_type = None                        # always undo cell
-
-        return eliminations
-
-    return sorted(domain, key=count_eliminations)
-
+def forward_check(grid, cell, domains, trail, remaining_counts):
+    for neighbor in grid.get_cells_within_hops(cell.row, cell.col, 3):
+        if neighbor.is_assigned():
+            continue
+        for val in domains[neighbor][:]:
+            if remaining_counts.get(val, 0) <= 0:
+                domains[neighbor].remove(val)
+                trail.append((neighbor, val))
+                continue
+            neighbor.location_type = val
+            if not check_all_constraints(grid, neighbor, domains):
+                domains[neighbor].remove(val)
+                trail.append((neighbor, val))
+            neighbor.location_type = None
+        if not domains[neighbor]:
+            return False
+    return True
 
 # AC-3 (arc consistency)
-def ac3(grid, domains):
+def ac3(grid, domains, trail=None):
     queue = deque()
     for row in grid.cells:
         for cell in row:
             if cell.is_assigned():
                 continue
-            for neighbor in grid.get_neighbors(cell.row, cell.col):
-                if not neighbor.is_assigned():
+            for neighbor in grid.get_cells_within_hops(cell.row, cell.col, 3):
+                if neighbor is not cell and not neighbor.is_assigned():
                     queue.append((cell, neighbor))
 
     while queue:
         xi, xj = queue.popleft()
-        if revise(xi, xj, domains, grid):
+        if revise(xi, xj, domains, grid, trail):
             if len(domains[xi]) == 0:
                 return False
-            for neighbor in grid.get_neighbors(xi.row, xi.col):
-                if neighbor != xj and not neighbor.is_assigned():
+            for neighbor in grid.get_cells_within_hops(xi.row, xi.col, 3):
+                if neighbor is not xj and not neighbor.is_assigned():
                     queue.append((neighbor, xi))
 
     return True
 
-def revise(xi, xj, domains, grid):
+def revise(xi, xj, domains, grid, trail=None):
     revised = False
-    for x in domains.get(xi, [])[:]:   # iterate over a copy
+    for x in domains.get(xi, [])[:]:
         xi.location_type = x
         satisfies = False
         for y in domains.get(xj, []):
@@ -386,24 +213,26 @@ def revise(xi, xj, domains, grid):
         xj.location_type = None
         if not satisfies:
             domains[xi].remove(x)
+            if trail is not None:
+                trail.append((xi, x))  # record what was pruned
             revised = True
     return revised
 
 # Backtracking search
-def backtrack(grid, domains, remaining_counts, depth=0):
+def backtrack(grid, domains, remaining_counts, unassigned, depth=0):
     stats.steps += 1
     stats.depth = depth
     stats.max_depth = max(stats.max_depth, depth)
-    
-    # Base case: every cell has been assigned
-    if next(grid.unassigned_cells(), None) is None:
-        return True
 
-    cell = select_unassigned_variable(grid, domains)
-    if cell is None:
-        return True
+    if stats.steps > MAX_STEPS_PER_ATTEMPT:
+        return False
 
-    # Snapshot the domain list before LCV ordering (ordering may mutate state)
+    if not unassigned:
+        violations = identify_violated_constraints(grid)
+        return len(violations) == 0
+
+    cell = select_unassigned_variable(grid, domains, unassigned)
+
     ordered_values = order_domain_values(
         cell, list(domains.get(cell, [])), grid, domains
     )
@@ -415,25 +244,30 @@ def backtrack(grid, domains, remaining_counts, depth=0):
         # --- assign ---
         cell.location_type = value
         remaining_counts[value] -= 1
+        unassigned.discard(cell)
+
+        trail = []
+
+        if remaining_counts[value] == 0:
+            for c in unassigned:
+                if value in domains.get(c, []):
+                    domains[c].remove(value)
+                    trail.append((c, value))
 
         if check_all_constraints(grid, cell, domains):
-            # Deep-copy domains so we can restore on backtrack
-            saved_domains = {c: list(v) for c, v in domains.items()}
-
-            if ac3(grid, domains):
-                if backtrack(grid, domains, remaining_counts, depth + 1):
+            if forward_check(grid, cell, domains, trail, remaining_counts):
+                if backtrack(grid, domains, remaining_counts, unassigned, depth + 1):
                     return True
 
-            # Restore pruned domains
-            domains.clear()
-            domains.update(saved_domains)
+        for pruned_cell, pruned_val in trail:
+            domains[pruned_cell].append(pruned_val)
 
         # --- undo ---
         cell.location_type = None
         remaining_counts[value] += 1
+        unassigned.add(cell)
 
     return False
-
 
 # Minimum conflict fallback
 def minimum_conflict_layout(grid, required_counts):
@@ -531,9 +365,7 @@ def run_layout(grid_size, required_counts):
     used = sum(required_counts.values())
 
     if used > total_cells:
-        raise ValueError(
-            f"Too many buildings ({used}) for grid size {total_cells}"
-        )
+        raise ValueError(f"Too many buildings ({used}) for grid size {total_cells}")
 
     grid = Grid(grid_size)
     remaining_counts = {}
@@ -545,24 +377,34 @@ def run_layout(grid_size, required_counts):
     remaining_counts[LocationType.RESIDENTIAL] = required_counts.get(LocationType.RESIDENTIAL, 0)
     remaining_counts[LocationType.EMPTY] = total_cells - used
 
-    domains = {
-        cell: [lt for lt, cnt in remaining_counts.items() if cnt > 0]
-        for row in grid.cells
-        for cell in row
-    }
-
-    success = backtrack(grid, domains, remaining_counts)
-
-    if success:
-        violations = []
-    else:
-        print("[C1] Backtracking failed, using fallback...")
-        grid, violations = minimum_conflict_layout(grid, required_counts)
-
+    for attempt in range(MAX_ATTEMPTS):
+        print(f"[C1] Attempt {attempt + 1}/{MAX_ATTEMPTS} with backtracking...")
+        stats.steps = 0
+        grid = Grid(grid_size)
+        domains = {
+            cell: [lt for lt, cnt in remaining_counts.items() 
+                if cnt > 0 and lt != LocationType.EMPTY]
+            for row in grid.cells for cell in row
+        }
+        if not ac3(grid, domains):
+            break
+        unassigned = {cell for row in grid.cells for cell in row}
+        rc = dict(remaining_counts)  # fresh copy each attempt
+        
+        if backtrack(grid, domains, rc, unassigned):
+            for row in grid.cells:
+                for cell in row:
+                    if not cell.is_assigned():
+                        cell.location_type = LocationType.EMPTY
+            assign_simulation_properties(grid)
+            farthest = find_farthest_hospital_from_depot(grid)
+            if farthest:
+                farthest.location_type = LocationType.PRIMARY_HOSPITAL
+            return grid, []
+        
+        if stats.steps < MAX_STEPS_PER_ATTEMPT:
+            break  # genuinely no solution, not just bad luck
+    
+    grid, violations = minimum_conflict_layout(grid, required_counts)
     assign_simulation_properties(grid)
-    
-    farthest_hospital = find_farthest_hospital_from_depot(grid)
-    if farthest_hospital:
-        farthest_hospital.location_type = LocationType.PRIMARY_HOSPITAL
-    
     return grid, violations

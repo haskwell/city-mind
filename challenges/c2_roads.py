@@ -1,18 +1,18 @@
 import math
 import heapq
-import networkx as nx
 
 from challenges.c1_layout import Grid, LocationType
 from core.city_graph import CityGraph
 
-
 def _edge_base_cost(cell_a, cell_b) -> float:
-    if cell_a.location_type == LocationType.RESIDENTIAL or cell_b.location_type == LocationType.RESIDENTIAL:
+    if (cell_a.location_type == LocationType.RESIDENTIAL
+            or cell_b.location_type == LocationType.RESIDENTIAL):
         return 0.8
     return 1.0
 
 
 def build_candidate_edges(grid: Grid) -> list:
+    """Return every valid adjacent-cell pair as a (cost, u, v) tuple."""
     edges = []
     for r in range(grid.size):
         for c in range(grid.size):
@@ -32,7 +32,6 @@ def build_candidate_edges(grid: Grid) -> list:
 
     return edges
 
-
 def initialise_graph(grid: Grid) -> CityGraph:
     cg = CityGraph()
     for r in range(grid.size):
@@ -49,11 +48,10 @@ def initialise_graph(grid: Grid) -> CityGraph:
             )
     return cg
 
-
 class UnionFind:
     def __init__(self, nodes):
         self.parent = {n: n for n in nodes}
-        self.rank = {n: 0 for n in nodes}
+        self.rank   = {n: 0  for n in nodes}
 
     def find(self, x):
         if self.parent[x] != x:
@@ -71,12 +69,11 @@ class UnionFind:
             self.rank[rx] += 1
         return True
 
-
 def kruskal_mst(cg: CityGraph, candidate_edges: list) -> list:
-    mst_edges = []
+    mst_edges    = []
     sorted_edges = sorted(candidate_edges, key=lambda e: e[0])
-    uf = UnionFind(list(cg.nodes()))
-    num_nodes = cg.number_of_nodes()
+    uf           = UnionFind(list(cg.nodes()))
+    num_nodes    = cg.number_of_nodes()
 
     for cost, u, v in sorted_edges:
         if u not in uf.parent or v not in uf.parent:
@@ -88,17 +85,102 @@ def kruskal_mst(cg: CityGraph, candidate_edges: list) -> list:
 
     return mst_edges
 
-
 def add_mst_to_graph(cg: CityGraph, mst_edges: list) -> None:
     for u, v, cost in mst_edges:
-        cg.add_edge(u, v, base_cost=cost, blocked=False, effective_cost=cost, redundancy=False)
+        cg.add_edge(u, v, base_cost=cost, blocked=False,
+                    effective_cost=cost, redundancy=False)
+
+def _build_tree_adjacency(mst_edges: list) -> dict:
+    adj = {}
+    for u, v, cost in mst_edges:
+        adj.setdefault(u, []).append((v, cost))
+        adj.setdefault(v, []).append((u, cost))
+    return adj
 
 
-def dijkstra(cg: CityGraph, source, target, excluded_edges: set = None) -> list | None:
+def _path_in_tree(adj: dict, source, target) -> list | None:
+    if source == target:
+        return []
+
+    visited = {source}
+    queue   = [(source, [])]
+
+    while queue:
+        node, path = queue.pop(0)
+        for neighbour, _ in adj.get(node, []):
+            if neighbour in visited:
+                continue
+            visited.add(neighbour)
+            new_path = path + [frozenset({node, neighbour})]
+            if neighbour == target:
+                return new_path
+            queue.append((neighbour, new_path))
+
+    return None
+
+def greedy_bridge_augmentation(cg: CityGraph,
+                                mst_edges: list,
+                                candidate_edges: list) -> list:
+    graph_nodes  = set(cg.nodes())
+    mst_edge_set = {frozenset({u, v}) for u, v, _ in mst_edges}
+
+    uncovered_bridges = set(mst_edge_set)
+    tree_adj = _build_tree_adjacency(mst_edges)
+
+    # Pre-compute coverage for every non-tree candidate edge once up front.
+    # coverage_map: (u, v) -> (cost, frozenset of bridges it covers)
+    coverage_map: dict = {}
+    for cost, u, v in candidate_edges:
+        if frozenset({u, v}) in mst_edge_set:
+            continue
+        if u not in graph_nodes or v not in graph_nodes:
+            continue
+        path_edges = _path_in_tree(tree_adj, u, v)
+        if path_edges:
+            coverage_map[(u, v)] = (cost, frozenset(path_edges))
+
+    augmentation_edges = []
+
+    while uncovered_bridges:
+        best_key      = None
+        best_count    = 0
+        best_cost     = math.inf
+
+        for (u, v), (cost, covered_set) in coverage_map.items():
+            count = len(uncovered_bridges & covered_set)
+            if count > best_count or (count == best_count and cost < best_cost):
+                best_key   = (u, v)
+                best_count = count
+                best_cost  = cost
+
+        if best_key is None or best_count == 0:
+            print(f"[C2] WARNING: {len(uncovered_bridges)} bridge(s) could "
+                  f"not be covered — some nodes may lack a redundant path.")
+            break
+
+        u, v = best_key
+        cost = coverage_map[best_key][0]
+        augmentation_edges.append((u, v, cost))
+
+        uncovered_bridges -= coverage_map[best_key][1]
+        del coverage_map[best_key]
+
+    return augmentation_edges
+
+
+def add_augmentation_edges(cg: CityGraph, augmentation_edges: list) -> None:
+    for u, v, cost in augmentation_edges:
+        if cg.has_edge(u, v):
+            continue
+        cg.add_edge(u, v, base_cost=cost, blocked=False,
+                    effective_cost=cost, redundancy=True)
+
+def dijkstra(cg: CityGraph, source, target,
+             excluded_edges: set = None) -> list | None:
     if excluded_edges is None:
         excluded_edges = set()
 
-    g = cg.g
+    g    = cg.g
     dist = {node: math.inf for node in g.nodes}
     dist[source] = 0
     prev = {node: None for node in g.nodes}
@@ -125,18 +207,15 @@ def dijkstra(cg: CityGraph, source, target, excluded_edges: set = None) -> list 
     if dist[target] == math.inf:
         return None
 
-    path = []
-    node = target
+    path, node = [], target
     while node is not None:
         path.append(node)
         node = prev[node]
     return list(reversed(path))
 
-
 def find_hospital_and_depot(cg: CityGraph) -> tuple:
     hospital = None
-    depot = None
-
+    depot    = None
     for node, data in cg.nodes(data=True):
         if data.get("type") == LocationType.PRIMARY_HOSPITAL:
             hospital = node
@@ -147,81 +226,6 @@ def find_hospital_and_depot(cg: CityGraph) -> tuple:
     return hospital, depot
 
 
-def _dijkstra_on_nx(g: nx.Graph, source, target, excluded_edges: set = None) -> list | None:
-    if excluded_edges is None:
-        excluded_edges = set()
-
-    dist = {node: math.inf for node in g.nodes}
-    dist[source] = 0
-    prev = {node: None for node in g.nodes}
-    heap = [(0, source)]
-
-    while heap:
-        cost, u = heapq.heappop(heap)
-        if cost > dist[u]:
-            continue
-        if u == target:
-            break
-        for v in g.neighbors(u):
-            edge = g[u][v]
-            if frozenset({u, v}) in excluded_edges:
-                continue
-            if edge.get("blocked", False):
-                continue
-            new_cost = dist[u] + edge["effective_cost"]
-            if new_cost < dist[v]:
-                dist[v] = new_cost
-                prev[v] = u
-                heapq.heappush(heap, (new_cost, v))
-
-    if dist[target] == math.inf:
-        return None
-
-    path = []
-    node = target
-    while node is not None:
-        path.append(node)
-        node = prev[node]
-    return list(reversed(path))
-
-
-def double_dijkstra_redundancy(cg: CityGraph, hospital, depot, candidate_edges: list) -> tuple:
-    path1 = dijkstra(cg, hospital, depot)
-
-    if path1 is None:
-        print("[C2] WARNING: No path found between hospital and depot!")
-        return None, None
-
-    node_data = dict(cg.nodes(data=True))
-    augmented = cg.g.copy()
-    for cost, u, v in candidate_edges:
-        if not augmented.has_edge(u, v):
-            augmented.add_edge(u, v, base_cost=cost, blocked=False, effective_cost=cost, redundancy=True)
-
-    excluded_edges = set()
-    for i in range(len(path1) - 1):
-        excluded_edges.add(frozenset({path1[i], path1[i + 1]}))
-
-    path2 = _dijkstra_on_nx(augmented, hospital, depot, excluded_edges=excluded_edges)
-
-    if path2 is None:
-        print("[C2] WARNING: No second independent path found. Redundancy not guaranteed.")
-
-    return path1, path2
-
-
-def add_redundancy_edges(cg: CityGraph, path2: list) -> None:
-    if path2 is None:
-        return
-    node_data = dict(cg.nodes(data=True))
-    for i in range(len(path2) - 1):
-        u, v = path2[i], path2[i + 1]
-        if cg.has_edge(u, v):
-            continue
-        cost = 1.0 + node_data[u].get("risk_index", 0.0) + node_data[v].get("risk_index", 0.0)
-        cg.add_edge(u, v, base_cost=cost, blocked=False, effective_cost=cost, redundancy=True)
-
-
 def block_road(cg: CityGraph, u, v) -> None:
     cg.block_road(u, v)
     print(f"[C2] Road {u} ↔ {v} is now BLOCKED.")
@@ -230,12 +234,7 @@ def block_road(cg: CityGraph, u, v) -> None:
 def unblock_road(cg: CityGraph, u, v) -> None:
     cg.unblock_road(u, v)
 
-
-def update_effective_cost(cg: CityGraph, risk_multipliers: dict) -> None:
-    cg.update_effective_costs(risk_multipliers)
-
-
-def run_roads(grid: Grid) -> tuple:
+def run_roads(grid: Grid) -> CityGraph:
     print("[C2] Building road network...")
 
     candidate_edges = build_candidate_edges(grid)
@@ -248,20 +247,11 @@ def run_roads(grid: Grid) -> tuple:
     add_mst_to_graph(cg, mst_edges)
     print(f"[C2] MST built with {cg.number_of_edges()} road(s).")
 
-    hospital, depot = find_hospital_and_depot(cg)
-    if hospital is None or depot is None:
-        print("[C2] WARNING: Hospital or depot not found — skipping redundancy step.")
-        return cg, None, None
+    augmentation_edges = greedy_bridge_augmentation(cg, mst_edges, candidate_edges)
+    add_augmentation_edges(cg, augmentation_edges)
+    print(f"[C2] Bridge augmentation added {len(augmentation_edges)} extra road(s).")
 
-    print(f"[C2] Hospital at {hospital}, Depot at {depot}.")
+    print(f"[C2] Final road network: {cg.number_of_nodes()} nodes, "
+          f"{cg.number_of_edges()} edges.")
 
-    path1, path2 = double_dijkstra_redundancy(cg, hospital, depot, candidate_edges)
-    add_redundancy_edges(cg, path2)
-
-    if path1:
-        print(f"[C2] Primary path   ({len(path1)-1} edges): {path1}")
-    if path2:
-        print(f"[C2] Secondary path ({len(path2)-1} edges): {path2}")
-
-    print(f"[C2] Final road network: {cg.number_of_nodes()} nodes, {cg.number_of_edges()} edges.")
-    return cg, path1, path2
+    return cg
