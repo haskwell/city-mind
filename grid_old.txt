@@ -1,0 +1,653 @@
+{
+  "size": 9,
+  "cells": [
+    {
+      "row": 0,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 81.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 86.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 2,
+      "location_type": "RESIDENTIAL",
+      "population_density": 126.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 3,
+      "location_type": "RESIDENTIAL",
+      "population_density": 86.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 4,
+      "location_type": "RESIDENTIAL",
+      "population_density": 50.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 5,
+      "location_type": "SCHOOL",
+      "population_density": 118.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 6,
+      "location_type": "SCHOOL",
+      "population_density": 131.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 7,
+      "location_type": "SCHOOL",
+      "population_density": 105.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 0,
+      "col": 8,
+      "location_type": "POWER_PLANT",
+      "population_density": 35.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 70.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 124.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 2,
+      "location_type": "RESIDENTIAL",
+      "population_density": 98.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 3,
+      "location_type": "RESIDENTIAL",
+      "population_density": 193.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 4,
+      "location_type": "RESIDENTIAL",
+      "population_density": 196.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 5,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 6,
+      "location_type": "RESIDENTIAL",
+      "population_density": 156.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 7,
+      "location_type": "RESIDENTIAL",
+      "population_density": 152.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 1,
+      "col": 8,
+      "location_type": "RESIDENTIAL",
+      "population_density": 200.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 185.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 1,
+      "location_type": "PRIMARY_HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 2,
+      "location_type": "RESIDENTIAL",
+      "population_density": 137.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 3,
+      "location_type": "RESIDENTIAL",
+      "population_density": 200.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 4,
+      "location_type": "RESIDENTIAL",
+      "population_density": 110.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 5,
+      "location_type": "SCHOOL",
+      "population_density": 83.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 6,
+      "location_type": "RESIDENTIAL",
+      "population_density": 132.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 7,
+      "location_type": "RESIDENTIAL",
+      "population_density": 175.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 2,
+      "col": 8,
+      "location_type": "INDUSTRIAL",
+      "population_density": 450.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 122.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 130.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 2,
+      "location_type": "RESIDENTIAL",
+      "population_density": 64.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 3,
+      "location_type": "RESIDENTIAL",
+      "population_density": 115.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 4,
+      "location_type": "SCHOOL",
+      "population_density": 107.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 5,
+      "location_type": "SCHOOL",
+      "population_density": 70.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 6,
+      "location_type": "RESIDENTIAL",
+      "population_density": 54.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 7,
+      "location_type": "RESIDENTIAL",
+      "population_density": 62.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 3,
+      "col": 8,
+      "location_type": "RESIDENTIAL",
+      "population_density": 154.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 141.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 146.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 2,
+      "location_type": "POWER_PLANT",
+      "population_density": 39.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 3,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 4,
+      "location_type": "SCHOOL",
+      "population_density": 42.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 5,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 6,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 7,
+      "location_type": "RESIDENTIAL",
+      "population_density": 134.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 4,
+      "col": 8,
+      "location_type": "POWER_PLANT",
+      "population_density": 24.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 0,
+      "location_type": "INDUSTRIAL",
+      "population_density": 365.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 78.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 2,
+      "location_type": "INDUSTRIAL",
+      "population_density": 130.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 3,
+      "location_type": "POWER_PLANT",
+      "population_density": 33.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 4,
+      "location_type": "SCHOOL",
+      "population_density": 86.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 5,
+      "location_type": "POWER_PLANT",
+      "population_density": 32.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 6,
+      "location_type": "POWER_PLANT",
+      "population_density": 33.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 7,
+      "location_type": "INDUSTRIAL",
+      "population_density": 371.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 5,
+      "col": 8,
+      "location_type": "INDUSTRIAL",
+      "population_density": 246.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 183.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 60.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 2,
+      "location_type": "POWER_PLANT",
+      "population_density": 42.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 3,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 4,
+      "location_type": "SCHOOL",
+      "population_density": 119.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 5,
+      "location_type": "SCHOOL",
+      "population_density": 50.0,
+      "risk_index": 0.15,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 6,
+      "location_type": "RESIDENTIAL",
+      "population_density": 67.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 7,
+      "location_type": "INDUSTRIAL",
+      "population_density": 105.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 6,
+      "col": 8,
+      "location_type": "INDUSTRIAL",
+      "population_density": 395.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 0,
+      "location_type": "INDUSTRIAL",
+      "population_density": 451.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 1,
+      "location_type": "RESIDENTIAL",
+      "population_density": 78.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 2,
+      "location_type": "RESIDENTIAL",
+      "population_density": 88.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 3,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 4,
+      "location_type": "RESIDENTIAL",
+      "population_density": 136.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 5,
+      "location_type": "RESIDENTIAL",
+      "population_density": 159.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 6,
+      "location_type": "RESIDENTIAL",
+      "population_density": 200.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 7,
+      "location_type": "INDUSTRIAL",
+      "population_density": 213.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 7,
+      "col": 8,
+      "location_type": "POWER_PLANT",
+      "population_density": 40.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 0,
+      "location_type": "RESIDENTIAL",
+      "population_density": 157.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 1,
+      "location_type": "POWER_PLANT",
+      "population_density": 46.0,
+      "risk_index": 0.7,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 2,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 3,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 4,
+      "location_type": "HOSPITAL",
+      "population_density": 50.0,
+      "risk_index": 0.1,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 5,
+      "location_type": "RESIDENTIAL",
+      "population_density": 131.0,
+      "risk_index": 0.3,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 6,
+      "location_type": "AMBULANCE_DEPOT",
+      "population_density": 27.0,
+      "risk_index": 0.05,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 7,
+      "location_type": "INDUSTRIAL",
+      "population_density": 305.0,
+      "risk_index": 0.6,
+      "accessible": true
+    },
+    {
+      "row": 8,
+      "col": 8,
+      "location_type": "INDUSTRIAL",
+      "population_density": 331.0,
+      "risk_index": 0.6,
+      "accessible": true
+    }
+  ]
+}
