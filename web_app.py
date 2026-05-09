@@ -128,12 +128,12 @@ def api_run_roads():
     if state["grid"] is None:
         return jsonify({"success": False, "error": "Run CSP first"}), 400
     try:
-        cg, path1, path2 = run_roads(state["grid"])
+        cg = run_roads(state["grid"])
         state["city_graph"] = cg
-        state["path1"] = path1
-        state["path2"] = path2
+        state["path1"] = None
+        state["path2"] = None
         state["ambulance_result"] = None
-        return jsonify({"success": True, **graph_to_json(cg, path1, path2)})
+        return jsonify({"success": True, **graph_to_json(cg, None, None)})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400
 

@@ -395,8 +395,8 @@ async function runRoads() {
       $('c2_nodes').textContent = data.nodes;
       $('c2_mst').textContent   = data.mst_edges;
       $('c2_extra').textContent = data.extra_edges;
-      $('c2_path1').textContent = data.path1_hops != null ? `${data.path1_hops} hops` : 'none';
-      $('c2_path2').textContent = data.path2_hops != null ? `${data.path2_hops} hops` : 'none ⚠';
+      $('c2_path1').textContent = '—';
+      $('c2_path2').textContent = `${data.extra_edges} bridge edges`;
 
       $('btn_ambulance').disabled = false;
     } else {
