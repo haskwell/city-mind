@@ -7,11 +7,22 @@ const state = {
   grid:       null,   // { size, cells[] }
   roads:      null,   // { edges[], path1, path2, ... }
   ambulance:  null,   // { placements[], ... }
+  crime:      null,
 };
 
 // ── Canvas config ──────────────────────────────────
 const CELL  = 62;
 const PAD   = 3;
+
+const CLUSTER_COLORS = [
+  '#f59e0b', '#a855f7', '#22c55e', '#ef4444', '#3b82f6', '#00c9e0'
+];
+
+const RISK_COLORS = {
+  High:   '#ef4444',
+  Medium: '#f59e0b',
+  Low:    '#22c55e',
+};
 
 const COLORS = {
   EMPTY:            '#0d1117',
@@ -123,6 +134,88 @@ function renderAll() {
   if (state.ambulance) drawAmbulances(ctx);
   if (state.roads)     redrawLabels(ctx, size);
   if (!state.roads)    drawLabels(ctx, size);
+  if (state.crime)     drawClusterOutlines(ctx);
+  if (state.roads)     drawRoads(ctx);
+  if (state.ambulance) drawAmbulances(ctx);
+  if (state.crime)     drawRiskDots(ctx);      // after ambulances so dots are on top
+}
+
+function drawClusterOutlines(ctx) {
+  const { cluster_labels } = state.crime;
+  if (!cluster_labels) return;
+
+  const clusterCells = {};
+  for (const cell of state.grid.cells) {
+    if (cell.type === 'EMPTY') continue;
+    const key = `[${cell.row}, ${cell.col}]`;
+    const cluster = cluster_labels[key];
+    if (cluster === undefined) continue;
+    if (!clusterCells[cluster]) clusterCells[cluster] = [];
+    clusterCells[cluster].push(cell);
+  }
+
+  for (const [cluster, cells] of Object.entries(clusterCells)) {
+    const color = CLUSTER_COLORS[cluster % CLUSTER_COLORS.length];
+    ctx.fillStyle = color + 'ff';
+    ctx.strokeStyle = color + 'ff';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([]);
+
+    for (const cell of cells) {
+      const x1 = cell.col * CELL + (cell.col + 1) * PAD;
+      const y1 = cell.row * CELL + (cell.row + 1) * PAD;
+      ctx.fillRect(x1, y1, CELL, CELL);
+    }
+
+    for (const cell of cells) {
+      const x1 = cell.col * CELL + (cell.col + 1) * PAD;
+      const y1 = cell.row * CELL + (cell.row + 1) * PAD;
+      const neighbors = [
+        [cell.row - 1, cell.col],
+        [cell.row + 1, cell.col],
+        [cell.row, cell.col - 1],
+        [cell.row, cell.col + 1],
+      ];
+      for (const [nr, nc] of neighbors) {
+        const isInCluster = cells.some(c => c.row === nr && c.col === nc);
+        if (isInCluster) continue;
+        ctx.beginPath();
+        if (nr === cell.row - 1) { ctx.moveTo(x1, y1);           ctx.lineTo(x1 + CELL, y1); }
+        if (nr === cell.row + 1) { ctx.moveTo(x1, y1 + CELL);    ctx.lineTo(x1 + CELL, y1 + CELL); }
+        if (nc === cell.col - 1) { ctx.moveTo(x1, y1);           ctx.lineTo(x1, y1 + CELL); }
+        if (nc === cell.col + 1) { ctx.moveTo(x1 + CELL, y1);    ctx.lineTo(x1 + CELL, y1 + CELL); }
+        ctx.strokeStyle = color + 'cc';
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.setLineDash([]);
+}
+
+function drawRiskDots(ctx) {
+  const { risk_levels } = state.crime;
+  if (!risk_levels) return;
+
+  for (const cell of state.grid.cells) {
+    if (cell.type === 'EMPTY') continue;
+    const key = `[${cell.row}, ${cell.col}]`;
+    const risk = risk_levels[key];
+    if (!risk) continue;
+
+    const x1 = cell.col * CELL + (cell.col + 1) * PAD;
+    const y1 = cell.row * CELL + (cell.row + 1) * PAD;
+    const dotR = 5;
+    const cx = x1 + CELL - 10;
+    const cy = y1 + 10;
+
+    ctx.fillStyle   = RISK_COLORS[risk];
+    ctx.shadowColor = RISK_COLORS[risk];
+    ctx.shadowBlur  = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, dotR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
 }
 
 function drawGrid(ctx, size) {
@@ -398,7 +491,7 @@ async function runRoads() {
       $('c2_path1').textContent = '—';
       $('c2_path2').textContent = `${data.extra_edges} bridge edges`;
 
-      $('btn_ambulance').disabled = false;
+      $('btn_crime').disabled = false;
     } else {
       setStatus('dot_c2', 'text_c2', 'err', 'Error: ' + data.error);
       setGlobal('err', 'Roads failed');
@@ -464,5 +557,116 @@ function resetAmbulanceUI() {
   $('btn_ambulance').disabled    = true;
 }
 
+async function runCrime() {
+  setGlobal('running', 'Predicting crime risk…');
+  setStatus('dot_c5', 'text_c5', 'running', 'Running ML…');
+  $('btn_crime').disabled = true;
+
+  try {
+    const k = parseInt($('crime_k').value) || 0;
+    const res = await fetch('/api/run_crime', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ k }),
+    });    const data = await res.json();
+    if (data.success) {
+      state.crime = data;
+      renderAll();
+      drawModelAnalysis(data.model_analysis);
+      setStatus('dot_c5', 'text_c5', 'ok', 'Risk predicted ✓');
+      setGlobal('ok', 'C5 complete');
+      $('c5_high').textContent   = data.high;
+      $('c5_medium').textContent = data.medium;
+      $('c5_low').textContent    = data.low;
+      $('btn_ambulance').disabled = false;
+    } else {
+      setStatus('dot_c5', 'text_c5', 'err', 'Error: ' + data.error);
+      setGlobal('err', 'C5 failed');
+    }
+  } catch (e) {
+    setStatus('dot_c5', 'text_c5', 'err', 'Network error');
+  }
+  $('btn_crime').disabled = false;
+}
+
+function drawModelAnalysis(analysis) {
+  let panel = $('model_analysis_panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'model_analysis_panel';
+    panel.style.cssText = `
+      position: fixed; bottom: 20px; right: 20px;
+      background: #111620; border: 1px solid #2a3347;
+      color: #cdd6e8; font-family: 'Space Mono', monospace;
+      font-size: 11px; padding: 12px 14px; border-radius: 8px;
+      z-index: 998; min-width: 220px; line-height: 2;
+    `;
+    document.body.appendChild(panel);
+  }
+
+  const max = Math.max(...Object.values(analysis));
+  const rows = Object.entries(analysis).map(([name, imp]) => {
+    const pct   = Math.round((imp / max) * 100);
+    const color = imp > 0.3 ? '#ef4444' : imp > 0.15 ? '#f59e0b' : '#22c55e';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="width:120px;color:#5a6680">${name}</span>
+        <div style="flex:1;background:#1e2533;border-radius:3px;height:6px">
+          <div style="width:${pct}%;background:${color};height:6px;border-radius:3px"></div>
+        </div>
+        <span style="color:${color};width:36px;text-align:right">${(imp * 100).toFixed(1)}%</span>
+      </div>
+    `;
+  }).join('');
+
+  panel.innerHTML = `
+    <div style="color:#e8edf7;font-weight:700;margin-bottom:8px;letter-spacing:0.05em">MODEL FEATURE IMPORTANCE</div>
+    ${rows}
+  `;
+}
+
 // ── Init ───────────────────────────────────────────
 updateTotal();
+const canvas = $('city_canvas');
+const tooltip = document.createElement('div');
+tooltip.id = 'cell_tooltip';
+tooltip.style.cssText = `
+  position: fixed; display: none; pointer-events: none;
+  background: #111620; border: 1px solid #2a3347;
+  color: #cdd6e8; font-family: 'Space Mono', monospace;
+  font-size: 11px; padding: 8px 10px; border-radius: 6px;
+  z-index: 999; line-height: 1.8;
+`;
+document.body.appendChild(tooltip);
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!state.grid || !state.crime) { tooltip.style.display = 'none'; return; }
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const col = Math.floor(mx / (CELL + PAD));
+  const row = Math.floor(my / (CELL + PAD));
+  const cell = state.grid.cells.find(c => c.row === row && c.col === col);
+  if (!cell || cell.type === 'EMPTY') { tooltip.style.display = 'none'; return; }
+
+  const key         = `[${cell.row}, ${cell.col}]`;
+  const risk        = state.crime.risk_levels?.[key]  ?? '—';
+  const cluster     = state.crime.cluster_labels?.[key] ?? '—';
+  const explanation = state.crime.explanations?.[key] ?? '—';
+  const reasons     = explanation.split(' | ').map(r => `• ${r}`).join('<br>');
+
+  tooltip.innerHTML = `
+    <b>${cell.type}</b><br>
+    Risk: <span style="color:${RISK_COLORS[risk] || '#cdd6e8'}">${risk}</span><br>
+    Cluster: ${cluster}<br>
+    Density: ${cell.population_density}<br>
+    <span style="color:#5a6680;font-size:10px">${reasons}</span>
+  `;
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX + 14) + 'px';
+  tooltip.style.top  = (e.clientY - 10) + 'px';
+});
+
+canvas.addEventListener('mouseleave', () => {
+  tooltip.style.display = 'none';
+});

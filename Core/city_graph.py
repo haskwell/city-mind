@@ -25,10 +25,10 @@ class CityGraph:
         if self._g.has_edge(u, v):
             self._g[u][v]["blocked"] = False
 
-    def update_effective_costs(self, risk_multipliers: dict):
+    def update_effective_costs(self):
         for u, v, data in self._g.edges(data=True):
-            m_u = risk_multipliers.get(u, 1.0)
-            m_v = risk_multipliers.get(v, 1.0)
+            m_u = self._g.nodes[u].get("risk_index", 0.0) + 1.0
+            m_v = self._g.nodes[v].get("risk_index", 0.0) + 1.0
             self._g[u][v]["effective_cost"] = data["base_cost"] * m_u * m_v
 
     def number_of_nodes(self) -> int:

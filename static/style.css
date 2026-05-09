@@ -218,7 +218,7 @@ html, body {
   width: 36px;
   text-align: center;
   outline: none;
-  -moz-appearance: textfield;
+  appearance: textfield;
 }
 .stepper-input::-webkit-inner-spin-button,
 .stepper-input::-webkit-outer-spin-button { -webkit-appearance: none; }
@@ -469,3 +469,6 @@ html, body {
 .status-dot.running { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 1s infinite; }
 .status-dot.ok      { background: var(--green); box-shadow: 0 0 8px var(--green); }
 .status-dot.err     { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+.badge-c5 { background: #422006; color: #f59e0b; box-shadow: 0 0 12px #f59e0b22; }
+.btn-c5   { background: var(--amber); color: #000; }
+.btn-c5:hover { filter: brightness(1.15); box-shadow: 0 0 16px #f59e0b44; }

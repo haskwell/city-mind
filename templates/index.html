@@ -176,6 +176,37 @@
           </div>
         </div>
       </section>
+      
+      <section class="panel" id="panel_c5">
+        <div class="panel-header">
+          <div class="panel-badge badge-c5">C5</div>
+          <div class="panel-title-group">
+            <h2 class="panel-title">Crime Risk</h2>
+            <span class="algo-chip">ML</span>
+          </div>
+        </div>
+        <div class="field-row">
+        <label class="field-label">Clusters (0 = auto)</label>
+        <div class="stepper stepper-sm">
+          <button class="stepper-btn" onclick="adjustValue('crime_k', -1, 0, 10)">−</button>
+          <input class="stepper-input" type="number" id="crime_k" value="0" min="0" max="10">
+          <button class="stepper-btn" onclick="adjustValue('crime_k', 1, 0, 10)">+</button>
+        </div>
+      </div>
+        <button class="btn btn-c5" id="btn_crime" onclick="runCrime()" disabled>
+          <span class="btn-icon">▶</span> Predict Risk
+        </button>
+        <div class="status-line" id="status_c5">
+          <span class="dot dot-idle" id="dot_c5"></span>
+          <span id="text_c5" class="mono-sm">Run C2 first</span>
+        </div>
+        <div class="stats-block" id="stats_c5">
+          <div class="stat-row"><span class="stat-label">High Risk</span><span class="stat-value mono" id="c5_high">—</span></div>
+          <div class="stat-row"><span class="stat-label">Medium Risk</span><span class="stat-value mono" id="c5_medium">—</span></div>
+          <div class="stat-row"><span class="stat-label">Low Risk</span><span class="stat-value mono" id="c5_low">—</span></div>
+        </div>
+      </section>
+
 
       <!-- ── Challenge 3 ── -->
       <section class="panel" id="panel_c3">

@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from flask import Flask, render_template, request, jsonify
 from challenges.c1_layout import run_layout, save_grid, load_grid, LocationType
 from challenges.c2_roads import run_roads
+from challenges.c5_crime import run_crime
 from challenges.c3_ambulance import run_ambulance
 from scipy import stats as scipy_stats
 
@@ -155,6 +156,30 @@ def api_run_ambulance():
             "worst_case_distance": round(worst, 3) if worst < math.inf else None,
             "covered": covered,
             "total_citizens": len(coverage),
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    
+@app.route("/api/run_crime", methods=["POST"])
+def api_run_crime():
+    if state["city_graph"] is None:
+        return jsonify({"success": False, "error": "Run Roads first"}), 400
+    try:
+        data = request.json or {}
+        k = int(data.get("k", 0))
+        result = run_crime(state["city_graph"], k=k)
+        cluster_labels = {str(list(key)): v for key, v in result["cluster_labels"].items()}
+        risk_levels    = {str(list(key)): v for key, v in result["risk_levels"].items()}
+        explanations = {str(list(k)): v for k, v in result["explanations"].items()}
+        return jsonify({
+            "success":        True,
+            "high":           result["high_count"],
+            "medium":         result["medium_count"],
+            "low":            result["low_count"],
+            "cluster_labels": cluster_labels,
+            "risk_levels":    risk_levels,
+            "explanations":   explanations,
+            "model_analysis": result["model_analysis"],
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 400

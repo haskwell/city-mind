@@ -234,10 +234,6 @@ def block_road(cg: CityGraph, u, v) -> None:
 def unblock_road(cg: CityGraph, u, v) -> None:
     cg.unblock_road(u, v)
 
-
-def update_effective_cost(cg: CityGraph, risk_multipliers: dict) -> None:
-    cg.update_effective_costs(risk_multipliers)
-
 def run_roads(grid: Grid) -> CityGraph:
     print("[C2] Building road network...")
 
