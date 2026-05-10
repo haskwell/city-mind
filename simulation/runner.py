@@ -1,7 +1,3 @@
-"""
-CLI test runner for Challenge 4 — Emergency Routing.
-Run from the project root:  python -m simulation.runner
-"""
 import sys
 import os
 import time
@@ -15,32 +11,22 @@ from challenges.c3_ambulance import run_ambulance
 from challenges.c4_routing import init_routing, step_routing
 from challenges.c1_layout import LocationType
 
-STEP_DELAY_SECONDS = 0.3   # change to slow down / speed up
+STEP_DELAY_SECONDS = 0.3
 
 
 def run():
     print("=" * 60)
     print("  CityMind — Challenge 4: Emergency Routing (CLI)")
     print("=" * 60)
-
-    # Load grid
     grid = load_grid()
     print(f"Grid loaded: {grid.size}x{grid.size}")
-
-    # Build roads
     print("Building road network...")
     cg = run_roads(grid)
     print(f"Graph: {cg.number_of_nodes()} nodes, {cg.number_of_edges()} edges")
-
-    # Run risk prediction (updates effective costs)
     print("Running risk prediction...")
     run_risk_prediction(cg)
 
-    # Place ambulances (informational only — routing uses the depot)
-    print("Running ambulance placement...")
     run_ambulance(cg)
-
-    # Pick some civilians to rescue: first few RESIDENTIAL nodes
     civilian_nodes = []
     for node, data in cg.nodes(data=True):
         if data.get("type") == LocationType.RESIDENTIAL:
@@ -53,15 +39,11 @@ def run():
         return
 
     print(f"\nCivilians to rescue: {civilian_nodes}")
-
-    # Initialise routing
     sim_state = init_routing(cg, civilian_nodes)
     depot = sim_state["depot"]
     print(f"Depot at: {depot}")
     print(f"First target: {sim_state['current_target']}")
     print("-" * 60)
-
-    # Step loop
     while not sim_state["done"]:
         event = step_routing(cg, sim_state)
         tag = {

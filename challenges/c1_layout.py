@@ -6,7 +6,6 @@ from scipy import stats
 MAX_STEPS_PER_ATTEMPT = 500_000
 MAX_ATTEMPTS = 20
 
-# Constraint definitions
 def constraint_industrial_not_adjacent_to_hospital_or_school(grid, cell):
 
     if not cell.is_assigned():
@@ -14,15 +13,11 @@ def constraint_industrial_not_adjacent_to_hospital_or_school(grid, cell):
 
     for neighbor in grid.get_neighbors(cell.row, cell.col):
         if neighbor.is_assigned():
-
-            # industrial next to hospital/school
             if (
                 cell.location_type == LocationType.INDUSTRIAL and
                 neighbor.location_type in [LocationType.HOSPITAL, LocationType.SCHOOL]
             ):
                 return False
-
-            # hospital/school next to industrial
             if (
                 neighbor.location_type == LocationType.INDUSTRIAL and
                 cell.location_type in [LocationType.HOSPITAL, LocationType.SCHOOL]
@@ -32,24 +27,20 @@ def constraint_industrial_not_adjacent_to_hospital_or_school(grid, cell):
     return True
 
 def constraint_residential_within_3_hops_of_hospital(grid, cell, domains=None):
-    # Check this cell if it is residential
     if cell.location_type == LocationType.RESIDENTIAL:
         nearby = grid.get_cells_within_hops(cell.row, cell.col, 3)
         if any(n.location_type == LocationType.HOSPITAL for n in nearby):
             return True
-        # No hospital yet — check if one can still be placed nearby
         if domains is not None:
             for n in nearby:
                 if n is cell or n.is_assigned():
                     continue
                 if LocationType.HOSPITAL in domains.get(n, []):
-                    return True   # defer: a neighbour can still become a hospital
-            return False  # no candidate left
+                    return True
+            return False
         else:
-            return False  # STRICT final validation
+            return False
 
-    # If we placed a non-hospital cell, check nearby residential cells
-    # that might now have lost their only possible hospital placement
     if cell.location_type != LocationType.HOSPITAL and cell.is_assigned():
         nearby = grid.get_cells_within_hops(cell.row, cell.col, 3)
         for n in nearby:
@@ -60,7 +51,6 @@ def constraint_residential_within_3_hops_of_hospital(grid, cell, domains=None):
                 has_hospital = any(h.location_type == LocationType.HOSPITAL for h in n_nearby)
                 if has_hospital:
                     continue
-                # No hospital nearby for this residential — can we still place one?
                 if domains is not None:
                     can_place = False
                     for h_candidate in n_nearby:
@@ -72,11 +62,10 @@ def constraint_residential_within_3_hops_of_hospital(grid, cell, domains=None):
                     if not can_place:
                         return False
                 else:
-                    return False  # STRICT final validation
+                    return False
     return True
 
 def constraint_power_plant_within_2_hops_of_industrial(grid, cell, domains=None):
-    # Check this cell if it is a power plant
     if cell.location_type == LocationType.POWER_PLANT:
         nearby = grid.get_cells_within_hops(cell.row, cell.col, 2)
         if any(n.location_type == LocationType.INDUSTRIAL for n in nearby):
@@ -89,9 +78,8 @@ def constraint_power_plant_within_2_hops_of_industrial(grid, cell, domains=None)
                     return True
             return False
         else:
-            return False  # STRICT final validation
+            return False
 
-    # If we placed a non-industrial cell, check nearby power plants
     if cell.location_type != LocationType.INDUSTRIAL and cell.is_assigned():
         nearby = grid.get_cells_within_hops(cell.row, cell.col, 2)
         for n in nearby:
@@ -113,7 +101,7 @@ def constraint_power_plant_within_2_hops_of_industrial(grid, cell, domains=None)
                     if not can_place:
                         return False
                 else:
-                    return False  # STRICT final validation
+                    return False
     return True
 
 def check_all_constraints(grid, cell, domains=None):
@@ -124,16 +112,12 @@ def check_all_constraints(grid, cell, domains=None):
     )
 
 def identify_violated_constraints(grid):
-
     violations = []
 
     for row in grid.cells:
         for cell in row:
-
             if not cell.is_assigned():
                 continue
-
-            # check each constraint individually
             if not constraint_industrial_not_adjacent_to_hospital_or_school(grid, cell):
                 violations.append((cell, "INDUSTRIAL_ADJACENCY"))
 
@@ -146,7 +130,6 @@ def identify_violated_constraints(grid):
     return violations
 
 
-# CSP helpers
 def get_domain(cell, remaining_counts):
     if cell.is_assigned():
         return []
@@ -177,7 +160,6 @@ def forward_check(grid, cell, domains, trail, remaining_counts):
             return False
     return True
 
-# AC-3 (arc consistency)
 def ac3(grid, domains, trail=None):
     queue = deque()
     for row in grid.cells:
@@ -214,11 +196,10 @@ def revise(xi, xj, domains, grid, trail=None):
         if not satisfies:
             domains[xi].remove(x)
             if trail is not None:
-                trail.append((xi, x))  # record what was pruned
+                trail.append((xi, x))
             revised = True
     return revised
 
-# Backtracking search
 def backtrack(grid, domains, remaining_counts, unassigned, depth=0):
     stats.steps += 1
     stats.depth = depth
@@ -240,8 +221,6 @@ def backtrack(grid, domains, remaining_counts, unassigned, depth=0):
     for value in ordered_values:
         if remaining_counts.get(value, 0) <= 0:
             continue
-
-        # --- assign ---
         cell.location_type = value
         remaining_counts[value] -= 1
         unassigned.discard(cell)
@@ -261,19 +240,14 @@ def backtrack(grid, domains, remaining_counts, unassigned, depth=0):
 
         for pruned_cell, pruned_val in trail:
             domains[pruned_cell].append(pruned_val)
-
-        # --- undo ---
         cell.location_type = None
         remaining_counts[value] += 1
         unassigned.add(cell)
 
     return False
 
-# Minimum conflict fallback
 def minimum_conflict_layout(grid, required_counts):
     import random
-
-    # Clear any partial assignments left by backtracking
     for row in grid.cells:
         for cell in row:
             cell.location_type = None
@@ -289,7 +263,6 @@ def minimum_conflict_layout(grid, required_counts):
             all_cells[idx].location_type = lt
             idx += 1
 
-    # Fill remaining cells with EMPTY
     while idx < len(all_cells):
         all_cells[idx].location_type = LocationType.EMPTY
         idx += 1
@@ -308,24 +281,18 @@ def minimum_conflict_layout(grid, required_counts):
     return grid, violations
 
 
-# Post-assignment: fill in simulation properties
 def find_farthest_hospital_from_depot(grid):
-    """
-    Find the hospital farthest from the ambulance depot using Manhattan distance.
-    Returns the hospital cell or None if no hospital or depot exists.
-    """
     hospitals = list(grid.cells_of_type(LocationType.HOSPITAL))
     depots = list(grid.cells_of_type(LocationType.AMBULANCE_DEPOT))
     
     if not hospitals or not depots:
         return None
     
-    depot = depots[0]  # There should only be one depot
+    depot = depots[0]
     farthest_hospital = None
     max_distance = -1
     
     for hospital in hospitals:
-        # Calculate Manhattan distance
         distance = abs(hospital.row - depot.row) + abs(hospital.col - depot.col)
         
         if distance > max_distance:
@@ -336,8 +303,6 @@ def find_farthest_hospital_from_depot(grid):
 
 def assign_simulation_properties(grid):
     import random
-
-    # (density_min, density_max, risk_index)
     props = {
         LocationType.EMPTY:           (0,    0,    0.00),
         LocationType.RESIDENTIAL:     (50,   200,  0.30),
@@ -389,7 +354,7 @@ def run_layout(grid_size, required_counts):
         if not ac3(grid, domains):
             break
         unassigned = {cell for row in grid.cells for cell in row}
-        rc = dict(remaining_counts)  # fresh copy each attempt
+        rc = dict(remaining_counts)
         
         if backtrack(grid, domains, rc, unassigned):
             for row in grid.cells:
@@ -403,7 +368,7 @@ def run_layout(grid_size, required_counts):
             return grid, []
         
         if stats.steps < MAX_STEPS_PER_ATTEMPT:
-            break  # genuinely no solution, not just bad luck
+            break
     
     grid, violations = minimum_conflict_layout(grid, required_counts)
     assign_simulation_properties(grid)

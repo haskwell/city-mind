@@ -18,7 +18,6 @@ from scipy import stats as scipy_stats
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
-# Global server-side state (single-user local tool)
 state = {
     "grid": None,
     "city_graph": None,

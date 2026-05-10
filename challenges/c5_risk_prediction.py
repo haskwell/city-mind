@@ -6,7 +6,6 @@ from challenges.c1_layout import LocationType
 
 
 def _build_industry_dist(city_graph):
-    """Build distance map from industrial nodes."""
     industrial_nodes = [
         n for n, d in city_graph.nodes(data=True)
         if d.get("type") == LocationType.INDUSTRIAL
@@ -35,7 +34,6 @@ def _build_industry_dist(city_graph):
 
 
 def _generate_fake_training_data():
-    """Generate synthetic training data for Random Forest."""
     rng = np.random.default_rng(42)
     n = 2000
 
@@ -56,14 +54,12 @@ def _generate_fake_training_data():
 
 
 def _train_rf(X_train, y_train):
-    """Train Random Forest classifier."""
     model = RandomForestClassifier(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     return model
 
 
 def _extract_node_features(city_graph, industry_dist):
-    """Extract features for risk prediction from city nodes."""
     result = []
     for node, data in city_graph.nodes(data=True):
         loc_type = data.get("type")
@@ -76,7 +72,6 @@ def _extract_node_features(city_graph, industry_dist):
 
 
 def _predict_risk(model, node_features):
-    """Predict risk levels for nodes using trained model."""
     if not node_features:
         return {}
     nodes = [nf[0] for nf in node_features]
@@ -86,7 +81,6 @@ def _predict_risk(model, node_features):
 
 
 def _build_explanations(node_risk_map, industry_dist, city_graph):
-    """Build human-readable explanations for risk predictions."""
     explanations = {}
     for node, risk in node_risk_map.items():
         node_data = dict(city_graph.g.nodes[node])
@@ -113,7 +107,6 @@ def _build_explanations(node_risk_map, industry_dist, city_graph):
 
 
 def _write_risk_to_graph(city_graph, node_risk_map):
-    """Write risk indices to city graph for visualization."""
     risk_values = {"High": 1.5, "Medium": 1.2, "Low": 1.0}
     for node, risk in node_risk_map.items():
         city_graph.g.nodes[node]["risk_index"] = risk_values[risk]
@@ -121,22 +114,9 @@ def _write_risk_to_graph(city_graph, node_risk_map):
 
 
 def run_risk_prediction(city_graph):
-    """
-    Run Random Forest risk prediction on city nodes.
-    
-    Args:
-        city_graph: The city graph object
-    
-    Returns:
-        Dictionary containing risk prediction results
-    """
     industry_dist = _build_industry_dist(city_graph)
-
-    # Train model on synthetic data
     X_train, y_train = _generate_fake_training_data()
     model = _train_rf(X_train, y_train)
-
-    # Extract features and predict risk
     node_features = _extract_node_features(city_graph, industry_dist)
     node_risk_map = _predict_risk(model, node_features)
 
@@ -150,23 +130,14 @@ def run_risk_prediction(city_graph):
             "model_analysis": {},
             "error": "No valid nodes for risk prediction"
         }
-
-    # Build explanations
     explanations = _build_explanations(node_risk_map, industry_dist, city_graph)
-
-    # Write risk to graph
     _write_risk_to_graph(city_graph, node_risk_map)
-
-    # Format output
     risk_levels = {f"[{node[0]}, {node[1]}]": risk for node, risk in node_risk_map.items()}
     explanations_out = {f"[{node[0]}, {node[1]}]": exp for node, exp in explanations.items()}
-
-    # Count risk levels
     counts = {"High": 0, "Medium": 0, "Low": 0}
     for risk in node_risk_map.values():
         counts[risk] += 1
 
-    # Model analysis
     model_analysis = {
         "population_density": float(model.feature_importances_[0]),
         "dist_to_industry": float(model.feature_importances_[1]),

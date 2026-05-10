@@ -6,7 +6,6 @@ from challenges.c1_layout import LocationType
 
 
 def _build_feature_matrix(city_graph):
-    """Build feature matrix for K-means clustering."""
     nodes = []
     features = []
 
@@ -30,7 +29,6 @@ def _build_feature_matrix(city_graph):
 
 
 def _pick_k(X, k_max=8):
-    """Automatically select optimal number of clusters using elbow method."""
     n_samples = len(X)
     if n_samples < 4:
         return 2
@@ -57,16 +55,6 @@ def _pick_k(X, k_max=8):
 
 
 def run_clustering(city_graph, k=0):
-    """
-    Run K-means clustering on city nodes.
-    
-    Args:
-        city_graph: The city graph object
-        k: Number of clusters (0 for auto-selection)
-    
-    Returns:
-        Dictionary containing clustering results
-    """
     nodes, X = _build_feature_matrix(city_graph)
 
     if len(nodes) == 0:

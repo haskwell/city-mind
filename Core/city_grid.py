@@ -1,7 +1,6 @@
 from enum import Enum
 from collections import deque
 
-# Location types
 class LocationType(Enum):
     EMPTY       = "EMPTY"
     RESIDENTIAL = "RESIDENTIAL"
@@ -12,14 +11,13 @@ class LocationType(Enum):
     POWER_PLANT = "POWER_PLANT"
     AMBULANCE_DEPOT = "AMBULANCE_DEPOT"
 
-# Grid cell
 class Cell:
     def __init__(self, row, col):
         self.row = row
         self.col = col
-        self.location_type = None          # assigned by CSP
-        self.population_density = 0.0      # set after assignment
-        self.risk_index = 0.0              # set after assignment
+        self.location_type = None
+        self.population_density = 0.0
+        self.risk_index = 0.0
         self.accessible = True
 
     def is_assigned(self):
@@ -29,12 +27,11 @@ class Cell:
         lt = self.location_type.value if self.location_type else "?"
         return f"Cell({self.row},{self.col},{lt})"
 
-# Grid
 class Grid:
     def __init__(self, size):
         self.size = size
         self.cells = [[Cell(r, c) for c in range(size)] for r in range(size)]
-        self._hop_cache = {}   # (row, col, hops) -> list[Cell]
+        self._hop_cache = {}
         self._precompute_hops(max_hops=3)
 
     def _precompute_hops(self, max_hops):
@@ -74,10 +71,10 @@ class Grid:
 
     def get_neighbors(self, row, col):
         neighbors = [
-            self.get_cell(row - 1, col),  # up
-            self.get_cell(row + 1, col),  # down
-            self.get_cell(row, col - 1),  # left
-            self.get_cell(row, col + 1),  # right
+            self.get_cell(row - 1, col),
+            self.get_cell(row + 1, col),
+            self.get_cell(row, col - 1),
+            self.get_cell(row, col + 1),
         ]
 
         return [n for n in neighbors if n is not None]
@@ -100,7 +97,6 @@ class Grid:
                 yield cell
 
     def display(self):
-
         symbols = {
             LocationType.EMPTY: ".",
             LocationType.RESIDENTIAL: "R",

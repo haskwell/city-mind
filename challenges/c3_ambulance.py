@@ -33,7 +33,6 @@ def _dijkstra_single(cg: CityGraph, source) -> dict:
                 heapq.heappush(heap, (new_cost, v))
     return dist
 
-
 def _precompute_distances(cg: CityGraph, nodes_of_interest: list) -> dict:
     dist_map = {}
     for node in nodes_of_interest:

@@ -12,7 +12,6 @@ def _edge_base_cost(cell_a, cell_b) -> float:
 
 
 def build_candidate_edges(grid: Grid) -> list:
-    """Return every valid adjacent-cell pair as a (cost, u, v) tuple."""
     edges = []
     for r in range(grid.size):
         for c in range(grid.size):
@@ -97,7 +96,6 @@ def _build_tree_adjacency(mst_edges: list) -> dict:
         adj.setdefault(v, []).append((u, cost))
     return adj
 
-
 def _path_in_tree(adj: dict, source, target) -> list | None:
     if source == target:
         return []
@@ -121,14 +119,10 @@ def _path_in_tree(adj: dict, source, target) -> list | None:
 def greedy_bridge_augmentation(cg: CityGraph,
                                 mst_edges: list,
                                 candidate_edges: list) -> list:
-    graph_nodes  = set(cg.nodes())
+    graph_nodes = set(cg.nodes())
     mst_edge_set = {frozenset({u, v}) for u, v, _ in mst_edges}
-
     uncovered_bridges = set(mst_edge_set)
     tree_adj = _build_tree_adjacency(mst_edges)
-
-    # Pre-compute coverage for every non-tree candidate edge once up front.
-    # coverage_map: (u, v) -> (cost, frozenset of bridges it covers)
     coverage_map: dict = {}
     for cost, u, v in candidate_edges:
         if frozenset({u, v}) in mst_edge_set:
@@ -138,7 +132,6 @@ def greedy_bridge_augmentation(cg: CityGraph,
         path_edges = _path_in_tree(tree_adj, u, v)
         if path_edges:
             coverage_map[(u, v)] = (cost, frozenset(path_edges))
-
     augmentation_edges = []
 
     while uncovered_bridges:

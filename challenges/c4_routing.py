@@ -5,26 +5,16 @@ from core.city_graph import CityGraph
 from challenges.c1_layout import LocationType
 
 
-# ── Heuristic ──────────────────────────────────────────────────────────────
-
 def _heuristic(a, b):
-    """Euclidean distance between two (row, col) tuples."""
     return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
 
-# ── A* ─────────────────────────────────────────────────────────────────────
-
 def _astar(cg: CityGraph, start, target):
-    """
-    A* search on the CityGraph. Skips blocked edges.
-    Returns list of nodes from start to target (inclusive), or None if unreachable.
-    """
     if start == target:
         return [start]
 
     g = cg.g
-
-    open_heap = []   # (f, g_cost, node)
+    open_heap = []
     heapq.heappush(open_heap, (0.0, 0.0, start))
 
     came_from = {}
@@ -57,27 +47,16 @@ def _astar(cg: CityGraph, start, target):
                 f = new_cost + _heuristic(neighbor, target)
                 heapq.heappush(open_heap, (f, new_cost, neighbor))
 
-    return None  # No path found
-
-
-# ── Depot finder ───────────────────────────────────────────────────────────
+    return None
 
 def _find_depot(cg: CityGraph):
-    """Return the node whose type is AMBULANCE_DEPOT, or None."""
     for node, data in cg.nodes(data=True):
         if data.get("type") == LocationType.AMBULANCE_DEPOT:
             return node
     return None
 
 
-# ── Greedy nearest civilian picker ────────────────────────────────────────
-
 def _pick_next_target(cg: CityGraph, current_pos, remaining_civilians):
-    """
-    Run A* from current_pos to every civilian in remaining_civilians.
-    Return (best_civilian, path_to_it) — shortest path (by hop count) wins.
-    Returns (None, None) if all are unreachable.
-    """
     best_civilian = None
     best_path = None
     best_cost = math.inf
@@ -97,21 +76,7 @@ def _pick_next_target(cg: CityGraph, current_pos, remaining_civilians):
     return best_civilian, best_path
 
 
-# ── Public API ─────────────────────────────────────────────────────────────
-
 def init_routing(cg: CityGraph, civilian_nodes: list) -> dict:
-    """
-    Initialise the routing simulation.
-
-    Parameters
-    ----------
-    cg              : the shared CityGraph
-    civilian_nodes  : list of (row, col) tuples selected by the user
-
-    Returns
-    -------
-    sim_state dict  : initial simulation state
-    """
     depot = _find_depot(cg)
     if depot is None:
         raise ValueError("No AMBULANCE_DEPOT found in the city graph.")
@@ -135,26 +100,18 @@ def init_routing(cg: CityGraph, civilian_nodes: list) -> dict:
 
 
 def step_routing(cg: CityGraph, sim_state: dict) -> dict:
-    """
-    Advance the simulation by exactly one node along the planned path.
-    Mutates sim_state in place and returns an event dict.
-    """
     sim_state["step"] += 1
     step = sim_state["step"]
 
     current_pos    = sim_state["current_pos"]
     current_path   = sim_state["current_path"]
     current_target = sim_state["current_target"]
-
-    # Already done
     if sim_state["done"] or not current_path or len(current_path) < 2:
         sim_state["done"] = True
         return _event("done", sim_state, "Simulation complete — all civilians processed.", step)
 
     next_node = current_path[1]
     g = cg.g
-
-    # Check if next edge is still passable
     edge_blocked = False
     if g.has_edge(current_pos, next_node):
         edge_blocked = g[current_pos][next_node].get("blocked", False)
@@ -180,12 +137,10 @@ def step_routing(cg: CityGraph, sim_state: dict) -> dict:
         return _event("replan", sim_state,
                       f"Road blocked! Re-planned route to {new_target}.", step)
 
-    # Move one step forward
     sim_state["current_pos"]  = next_node
     sim_state["current_path"] = current_path[1:]
     current_pos = next_node
 
-    # Check if we reached the target
     if current_pos == current_target:
         sim_state["rescued"].append(current_target)
         sim_state["remaining_civilians"].remove(current_target)
@@ -215,12 +170,8 @@ def step_routing(cg: CityGraph, sim_state: dict) -> dict:
         return _event("rescue", sim_state,
                       f"Rescued civilian at {current_target}! Heading to {new_target}.", step)
 
-    # Normal move
     return _event("move", sim_state,
                   f"Moved to {current_pos}. {len(sim_state['current_path']) - 1} steps to target.", step)
-
-
-# ── Internal helpers ───────────────────────────────────────────────────────
 
 def _event(event_type: str, sim_state: dict, message: str, step: int) -> dict:
     return {
